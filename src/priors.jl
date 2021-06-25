@@ -24,6 +24,20 @@ end
 
 """
 
+    Uniform prior
+
+"""
+
+struct UniformPrior <: Prior
+    
+end
+
+function moments(p0::UniformPrior, μ, σ)
+    return μ,σ^2
+end
+
+"""
+
     gradient(p0::T, μ, σ) -> nothing
 
     update parameters with a single learning gradient step (learning rate is stored in p0)
@@ -93,7 +107,7 @@ SpikeSlabPrior(ρ,λ) = SpikeSlabPrior(ρ,λ,0.0,0.0);
 """
 ``p = \\frac1{(ℓ+1)((1/ρ-1) e^{-\\frac12 (μ/σ)^2 (2-\\frac1{1+ℓ})}\\sqrt{1+\\frac1{ℓ}}+1)}``
 """
-function moments(p0::SpikeSlabPrior,μ,σ)
+function moments(p0::SpikeSlabPrior,μ,σ2)
 #=
     s2 = σ^2
     d = 1 + p0.λ * s2;
@@ -105,17 +119,17 @@ function moments(p0::SpikeSlabPrior,μ,σ)
     va = (sd + (μ / d)^2 ) / f - av^2;
     #p0 = (1 - p0.params.ρ) * exp(-n) / (Z + (1-p0.params.ρ).*exp(-n));
     =#
-    ℓ0 = p0.λ * σ^2
+    ℓ0 = p0.λ * σ2
     ℓ = 1 + ℓ0;
-    z = ℓ * (1 + (1/p0.ρ-1) * exp(-0.5*(μ/σ)^2/ℓ) * sqrt(ℓ/ℓ0))
+    z = ℓ * (1 + (1/p0.ρ-1) * exp(-0.5*(μ)^2/σ2/ℓ) * sqrt(ℓ/ℓ0))
     av = μ / z;
-    va = (σ^2 + μ^2*(1/ℓ - 1/z)) / z;
+    va = (σ2 + μ^2*(1/ℓ - 1/z)) / z;
     return av, va
 end
 
 
-function gradient(p0::SpikeSlabPrior, μ, σ)
-    s = σ^2
+function gradient(p0::SpikeSlabPrior, μ, σ2)
+    s = σ2
     d = 1 + p0.λ * s;
     q = sqrt(p0.λ * s / d);
     f = exp(-μ^2 / (2s*d));
@@ -147,8 +161,8 @@ struct BinaryPrior{T<:Real} <: Prior
 end
 
 
-function moments(p0::BinaryPrior, μ, σ)
-    arg = -(σ^2 / 2) * (-p0.x0^2 - 2*(p0.x1 -p0.x0) * μ + p0.x1^2);
+function moments(p0::BinaryPrior, μ, σ2)
+    arg = -1/(2*σ2) * (-p0.x0^2 - 2*(p0.x1 -p0.x0) * μ + p0.x1^2);
     earg = exp(arg)
     Z = p0.ρ / earg + (1-p0.ρ);
     av = p0.ρ * p0.x0 / earg + (1-p0.ρ) * p0.x1;
@@ -171,9 +185,9 @@ struct GaussianPrior{T<:Real} <: Prior
     δβ::T
 end
 
-function moments(p0::GaussianPrior, μ, σ)
-    s = 1/(1/σ^2 + p0.β)
-    return s*(μ/σ^2 + p0.μ * p0.β), s
+function moments(p0::GaussianPrior, μ, σ2)
+    s = 1/(1/σ2 + p0.β)
+    return s*(μ/σ2 + p0.μ * p0.β), s
 end
 
 """
@@ -193,8 +207,8 @@ struct Posterior1Prior{T<:Real} <: Prior
     μ::T
 end
 
-function moments(p0::Posterior1Prior, μ, σ)
-    return p0.μ,σ^2
+function moments(p0::Posterior1Prior, μ, σ2)
+    return p0.μ,σ2
 end
 
 
@@ -246,9 +260,9 @@ mutable struct AutoPrior{T<:Real} <: Prior
     end
 end
 
-function moments(p0::AutoPrior, μ, σ)
+function moments(p0::AutoPrior, μ, σ2)
     do_update!(p0)
-    s22 = 2σ^2
+    s22 = 2σ2
     v = p0.FXW .* map(x->exp(-(x-μ)^2 / s22), p0.X)
     v .*= 1/sum(v)
     av = v ⋅ p0.X
@@ -265,8 +279,8 @@ function do_update!(p0::AutoPrior)
     copy!(p0.oldP, p0.P)
 end
 
-function gradient(p0::AutoPrior, μ, σ)
-    s22 = 2σ^2
+function gradient(p0::AutoPrior, μ, σ2)
+    s22 = 2σ2
     v = map(x->exp(-(x-μ)^2 / s22), p0.X)
     z = sum(v)
     v ./= z
@@ -328,4 +342,95 @@ function gradient(p0::ThetaMixturePrior,μ,σ)
     den=η*erfc(-x)+(1-η)*erfc(x)
     p0.η+=p0.δη*num/den
     p0.η=clamp(p0.η,0,1)
+end
+
+"""
+
+    ReLU prior: defines a potential for which
+    the transfer function of the hidden layer
+    variables are Rectified Linear Units.
+
+    Defined by inverse variance γ and mean θ/γ
+
+
+"""
+
+struct ReLUPrior{T<:Real} <: Prior
+    γ::T
+    θ::T
+end
+
+function moments(p0::ReLUPrior,μ,σ2)
+
+    m = (μ+p0.θ*σ2)/(1+p0.γ*σ2)
+    s = σ2/(1+p0.γ*σ2)
+
+    if s <0
+        throw(DomainError("Combined variance must be positive"))
+    end
+
+    α = m/sqrt(s)
+
+    av = m + sqrt(s)*pdf_cf(α)
+    va = s*(1-pdf_cf(α)^2-α*pdf_cf(α))
+
+    return av, va
+
+end
+
+"""
+
+    dReLU prior: defines a potential for which
+    the transfer function of the hidden layer
+    variables are  double Rectified Linear Units.
+
+    Defined by inverse variances γ₊,γ₋ and means θ₊/γ₊,θ₋/γ₋
+
+
+"""
+
+struct dReLUPrior{T<:Real} <: Prior
+    γ_p::T
+    θ_P::T
+    γ_m::T
+    θ_m::T
+end
+
+function ψ(x::T) where {T<:Real}
+    return 0.5*(1-erfc(x/sqrt(2.0)))
+end
+
+function pdf_cf2(x::T) where {T<:Real}
+    return sqrt(2/π)*exp(-x^2/2)/(1 - erf(x/sqrt(2)))
+end
+
+function pdf(x::T) where {T<:Real}
+    return exp(-x^2/2)/sqrt(2*π)
+end
+
+function moments(p0::dReLUPrior,μ,σ2; tol::T=1.0e-10) where {T <: Real}
+
+    m_p = (μ+p0.θ_p*σ2)/(1+p0.γ_p*σ2)
+    s_p = σ2/(1+p0.γ_p*σ2)
+    m_m = (μ+p0.θ_m*σ2)/(1+p0.γ_m*σ2)
+    s_m = σ2/(1+p0.γ_m*σ2)
+
+    α_p = m_p/sqrt(s_p)
+    α_m = m_m/sqrt(s_m)
+
+    w1 = sqrt(1.0+p0.γ_m*σ2)*Φ(α_p)
+    w2 = sqrt(1.0+p0.γ_p*σ2)*ψ(α_m)
+
+    if abs(α_m) > tol
+        av = (w1*m_p + w2*m_m)/(w1 + w2) + (sqrt(s_p)*w1*pdf_cf(α_p) + sqrt(s_m)*w2*pdf_cf2(α_m))/(w1 + w2)
+        av2 = (w1*(m_p^2 + s_p) + w2*( m_m^2 + s_m))/(w1 + w2) + (m_p*sqrt(s_p)*w1*pdf_cf(α_p) + m_m*sqrt(s_m)*w2*pdf_cf2(α_m))/(w1 + w2)
+    else
+        av = (w1*m_p + w2*m_m)/(w1 + w2) + σ*(sqrt(s_p/s_m)*pdf(α_p) + sqrt(s_m/s_p)*pdf(α_m))/(w1 + w2)
+        av2 = (w1*(m_p^2 + s_p) + w2*( m_m^2 + s_m))/(w1 + w2) + (m_p*sqrt(s_p)*w1*pdf_cf(α_p) + m_m*sqrt(s_m)*w2*pdf_cf2(α_m))/(w1 + w2)
+    end
+
+    va = av2 - av*av
+
+    return av, va
+
 end

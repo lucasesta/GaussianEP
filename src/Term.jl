@@ -39,3 +39,24 @@ function sum!(A::Matrix{T}, y::Vector{T}, H::Vector{Term{T}}) where T <: Real
         y .+= H[i].β * H[i].y
     end
 end
+
+struct TermRBM{T<:Real}
+    w::Matrix{T}
+    y::Vector{T}
+    β::T
+end
+
+TermRBM(w,y,β=one(eltype(w))) = TermRBM{eltype(w)}(w,y,eltype(w)(β))
+
+function sum!(A::Matrix{T}, y::Vector{T}, H::Vector{TermRBM{T}}) where T <: Real
+    fill!(A, zero(T))
+    fill!(y, zero(T))
+    W = zeros(T,length(y),length(y))
+    for i=1:length(H)
+        W[1:size(H[i].w,1),size(H[i].w,1)+1:end] = H[i].w
+        W[size(H[i].w,1)+1:end,1:size(H[i].w,1)] = H[i].w'
+        A .+= H[i].β * W
+        y .+= H[i].β * H[i].y
+    end
+end
+

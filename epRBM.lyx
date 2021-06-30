@@ -1,0 +1,1939 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Application of EP to RBM
+\end_layout
+
+\begin_layout Standard
+In this notes we present an attempt of application of the iterative algorithm
+ 
+\begin_inset Formula $\emph{expectation propagation}$
+\end_inset
+
+ to the inference of parameters associated to a restricted Boltzmann machine.
+ First of all, it is necessary to introduce the framework of RBM.
+ What we have in mind is a statistical model related to a bipartite graph,
+ made up of two kind of variables: 
+\begin_inset Formula $\emph{visible}$
+\end_inset
+
+ and 
+\begin_inset Formula $\emph{hidden}$
+\end_inset
+
+ ones.
+ The former coincide with a 
+\begin_inset Formula $N$
+\end_inset
+
+ components vector 
+\begin_inset Formula $\mathbf{v}=(v_{1},\dots,v_{N})$
+\end_inset
+
+, whereas the second with a 
+\begin_inset Formula $M$
+\end_inset
+
+ component vector 
+\begin_inset Formula $\mathbf{h}=(h_{1},\dots,h_{M})$
+\end_inset
+
+.
+ The graph is bipartite in the sense that visible variables interact only
+ with hidden ones, and no interactions are present among visible and hidden
+ themselves.
+ We can associate an energy function to a joint configuration 
+\begin_inset Formula $\mathbf{x}=(\mathbf{v},\mathbf{h})$
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+E\left[\mathbf{v},\mathbf{h}\right]=-\sum_{i=1}^{N}\sum_{\mu=1}^{M}w_{i\mu}v_{i}h_{\mu}+\sum_{i=1}^{N}\mathcal{V}(v_{i})+\sum_{\mu=1}^{M}\mathcal{U_{\mu}}(h_{\mu}),
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+and consequently, the probability associated to such a configuration will
+ read:
+\begin_inset Formula 
+\[
+P(\mathbf{v},\mathbf{h})=\frac{1}{Z}\exp\left\{ -E\left[\mathbf{v},\mathbf{h}\right]\right\} .
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Integrating out the hidden variables, it is possible to compute the marginal
+ probability of a visible configuration:
+\begin_inset Formula 
+\[
+P(\mathbf{v})=\int\mathrm{d}^{M}hP(\mathbf{v},\mathbf{h}),
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+and from this probability, we can define a likelihood function of the parameters
+ 
+\begin_inset Formula $\left\{ \mathbf{w},\mathbf{g},\mathbf{\mathcal{U}}\right\} $
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+\mathcal{L}\left[\mathbf{w},\mathbf{g},\mathbf{\mathcal{U}}\right]=\frac{1}{\mathcal{M}}\sum_{a=1}^{\mathcal{M}}\ln P(\mathbf{v}^{a}\vert\mathbf{w},\mathbf{g},\mathbf{\mathcal{U}})=\overline{\ln\int\mathrm{d}^{M}hP(\mathbf{v}^{a},\mathbf{h}\vert\mathbf{w},\mathbf{g},\mathbf{\mathcal{U}})}-\ln Z.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+When functions 
+\begin_inset Formula $g(v)$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathcal{U}(h)$
+\end_inset
+
+ are quadratic, the model is exactly solvable, since the whole distribution
+ coincides with a Gaussian.
+ The visible variables marginal turns out to be interacting via coupling
+ 
+\begin_inset Formula $J_{ij}=\sum_{\mu}w_{i\mu}w_{j\mu}$
+\end_inset
+
+.
+ EP approximation may turn out to be useful in the case in which these potential
+ posses higher order contributions.
+ In this perspective the associated exponential weights 
+\begin_inset Formula $\exp\left[-g(v)\right]$
+\end_inset
+
+ and 
+\begin_inset Formula $\exp\left[-\mathcal{U}(h)\right]$
+\end_inset
+
+ are interpreted as 
+\begin_inset Formula $\emph{intractable}$
+\end_inset
+
+ priors over 
+\begin_inset Formula $\mathbf{v}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{h}$
+\end_inset
+
+.
+ EP relies on iterative moment matching among intractable priors and gaussian
+ weights to approximate the joint distribution 
+\begin_inset Formula $P(\mathbf{v},\mathbf{h})$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+For now, let's proceed with the problem of inferring RBM's parameters.
+ To do so, let's compute the gradient of the likelihood with respect to
+ the weight 
+\begin_inset Formula $w_{j\nu}$
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+\frac{\partial\mathcal{L}}{\partial w_{j\nu}}=\overline{v_{j}\langle h_{\nu}\rangle_{P(\mathbf{h}\vert\mathbf{v})}}-\langle v_{j}h_{\nu}\rangle_{P(\mathbf{v},\mathbf{h})}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Thus, in order to compute the gradient, it is necessary to compute two ensemble
+ averages with respect to the distributions 
+\begin_inset Formula $P(\mathbf{h}\vert\mathbf{v})$
+\end_inset
+
+ and 
+\begin_inset Formula $P(\mathbf{v},\mathbf{h})$
+\end_inset
+
+.
+ Usually, these averages are approximated by means of algorithms such as
+ contrastive divergence.
+ Instead, we want to estimate these averages leveraging an EP approach.
+ In particular, EP will provide us estimate of the first and second moments
+ of the full distribution 
+\begin_inset Formula $P(\mathbf{x})$
+\end_inset
+
+ via a Gaussian approximation 
+\begin_inset Formula $Q(\mathbf{x})$
+\end_inset
+
+, whose expression reads:
+\begin_inset Formula 
+\[
+Q(\mathbf{x})=\frac{1}{(2\pi)^{\frac{N+M}{2}}|\Sigma|^{\frac{1}{2}}}\mathrm{e}^{-\frac{1}{2}\left(\mathbf{x}-\bar{\mathbf{x}}\right)^{T}\Sigma^{-1}\left(\mathbf{x}-\bar{\mathbf{x}}\right)}\propto\mathrm{e}^{-\frac{1}{2}\mathbf{x}^{T}A\mathbf{x}+\mathbf{x}^{T}\mathbf{m}}\prod_{p=1}^{N+M}\phi_{p}(x_{p};a_{p},d_{p}).
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let's analyze the various features.
+ We introduced a covariance matrix 
+\begin_inset Formula $\Sigma$
+\end_inset
+
+ of the whole variables space, which can be expressed as 
+\begin_inset Formula $\Sigma^{-1}=A+D$
+\end_inset
+
+, with 
+\begin_inset Formula $A_{i\mu}=w_{i\mu}$
+\end_inset
+
+ and 
+\begin_inset Formula $D$
+\end_inset
+
+ a diagonal matrix having as elements the inverse of the variances 
+\begin_inset Formula $d_{p}$
+\end_inset
+
+.
+ Indeed, the Gaussian weights 
+\begin_inset Formula $\phi_{p}$
+\end_inset
+
+ are employed to approximate the intractable 
+\begin_inset Formula $\emph{priors}$
+\end_inset
+
+ over 
+\begin_inset Formula $\mathbf{x}=(\mathbf{v},\mathbf{h})$
+\end_inset
+
+, and are characterized by a mean 
+\begin_inset Formula $a_{p}$
+\end_inset
+
+ and variance 
+\begin_inset Formula $d_{p}$
+\end_inset
+
+.
+ The whole mean vector 
+\begin_inset Formula $\mathbf{\bar{x}}=\Sigma\left(\mathbf{m}+D\mathbf{a}\right)$
+\end_inset
+
+, allows to immediately compute the average values of the hidden variables
+ once the EP algorithm has converged, for conditional of Gaussian distributions
+ are easily handled.
+ Finally, the vector 
+\begin_inset Formula $\mathbf{m}$
+\end_inset
+
+ is not present in principle in the energy function proposed here, but it
+ is needed in the case in which the Gaussian tractable interaction contains
+ a non zero mean vector.
+\end_layout
+
+\begin_layout Section
+EP equations
+\end_layout
+
+\begin_layout Standard
+In this section we aim at deriving EP equations for moments matching, providing
+ the approximate multivariate Gaussian 
+\begin_inset Formula $Q(\mathbf{x})$
+\end_inset
+
+ after convergence is reached.
+ The idea behind EP is the following.
+ For every index 
+\begin_inset Formula $p=1,\dots,N+M$
+\end_inset
+
+, one defines a tilted distribution: 
+\begin_inset Formula 
+\[
+Q^{(p)}(\mathbf{x})\propto\mathrm{e}^{-\frac{1}{2}\left(\mathbf{x}-\bar{\mathbf{x}}^{(p)}\right)^{T}\left(\Sigma^{(p)}\right)^{-1}\left(\mathbf{x}-\bar{\mathbf{x}}^{(p)}\right)}\psi_{p}(x_{p})=Q^{\backslash p}(\mathbf{x})\psi_{p}(x_{p}),
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+in which the Gaussian weight related to 
+\begin_inset Formula $p$
+\end_inset
+
+-th variable has been substituted by the intractable prior 
+\begin_inset Formula $\psi_{p}(x_{p})$
+\end_inset
+
+.
+ The tilted covariance matrix and mean vector are defined according to 
+\begin_inset Formula $\left(\Sigma^{(p)}\right)^{-1}=A+D^{(p)}$
+\end_inset
+
+, 
+\begin_inset Formula $\bar{\mathbf{x}}_{p}=\Sigma^{(p)}\left(\mathbf{m}+D^{(p)}\mathbf{a}\right)$
+\end_inset
+
+, with 
+\begin_inset Formula $D^{(p)}$
+\end_inset
+
+ the same diagonal matrix as 
+\begin_inset Formula $D$
+\end_inset
+
+ but the 
+\begin_inset Formula $p$
+\end_inset
+
+-th component which is set to zero.
+ The iterative procedure is based on the update of the parameters defining
+ 
+\begin_inset Formula $\phi_{p}$
+\end_inset
+
+, that is, its mean and variance.
+ This is achieved by equating the first two moments computed with respect
+ to the tilted distribution 
+\begin_inset Formula $Q^{(p)}$
+\end_inset
+
+ and to 
+\begin_inset Formula $Q(x)$
+\end_inset
+
+, interpreted as the product between 
+\begin_inset Formula $\phi_{p}$
+\end_inset
+
+ and the cavity weight 
+\begin_inset Formula $Q^{\backslash p}$
+\end_inset
+
+, in order to highlight dependence on 
+\begin_inset Formula $a_{p}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{p}$
+\end_inset
+
+, which are to be updated:
+\begin_inset Formula 
+\[
+Q(\mathbf{x})=Q^{\backslash p}(\mathbf{x})\phi_{p}(x_{p})\propto\mathrm{e}^{-\frac{1}{2}\left(\mathbf{x}-\bar{\mathbf{x}}^{(p)}\right)^{T}\left(\Sigma^{(p)}\right)^{-1}\left(\mathbf{x}-\bar{\mathbf{x}}^{(p)}\right)}\mathrm{e}^{-\frac{1}{2}\frac{(x_{p}-a_{p})^{2}}{b_{p}}}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Then the EP equations are derived by imposing:
+\begin_inset Formula 
+\[
+\begin{cases}
+\langle x_{p}\rangle_{Q^{(p)}}=\langle x_{p}\rangle_{Q} & ,\\
+\langle x_{p}^{2}\rangle_{Q^{(p)}}=\langle x_{p}^{2}\rangle_{Q} & .
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Expectation values with respect to 
+\begin_inset Formula $Q$
+\end_inset
+
+ can be readily computed exploiting the product between two Gaussians.
+ Indeed, if we have two normal distribution 
+\begin_inset Formula $\mathcal{N}(m_{1},s_{1})$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathcal{N}(m_{2},s_{2})$
+\end_inset
+
+, their product is again a Gaussian distribution having mean and variance:
+\begin_inset Formula 
+\[
+\begin{cases}
+m=s\left(\frac{m_{1}}{s_{1}}+\frac{m_{2}}{s_{2}}\right) & ,\\
+\\
+s=\left[\frac{1}{s_{1}}+\frac{1}{s_{2}}\right]^{-1} & .
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In our case the two Gaussians are represented by the marginal of 
+\begin_inset Formula $Q^{\backslash p}(\mathbf{x})$
+\end_inset
+
+ and 
+\begin_inset Formula $\phi_{p}(x_{p})$
+\end_inset
+
+.
+ In fact when we compute the average value of 
+\begin_inset Formula $x_{p}$
+\end_inset
+
+, we are actually marginalizing over all the other variables:
+\begin_inset Formula 
+\[
+\langle x_{p}\rangle_{Q}=\int\mathrm{d}^{M}xx_{p}Q^{\backslash p}(\mathbf{x})\phi_{p}(x_{p})=\int\mathrm{d}x_{p}x_{p}Q_{p}^{\backslash p}(x_{p})\phi_{p}(x_{p})=\langle x_{p}\rangle_{Q_{p}^{\backslash p}(x_{p})\phi_{p}(x_{p})}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The marginal cavity has mean and variance: 
+\begin_inset Formula $\overline{x}_{p}^{(p)}$
+\end_inset
+
+ and 
+\begin_inset Formula $\left(\Sigma_{(p)}\right)_{p,p}$
+\end_inset
+
+.
+ The Gaussian prior 
+\begin_inset Formula $\phi_{p}(x_{p})$
+\end_inset
+
+ on the other hand has mean and variance 
+\begin_inset Formula $a_{p}$
+\end_inset
+
+ and 
+\begin_inset Formula $d_{p}$
+\end_inset
+
+.
+ Applying the previous formula for the product of two Gaussians we obtain:
+\begin_inset Formula 
+\[
+\begin{cases}
+\langle x_{p}\rangle_{Q}=\left[\frac{1}{d_{p}}+\frac{1}{\left(\Sigma_{(p)}\right)_{p,p}}\right]^{-1}\left(\frac{a_{p}}{d_{p}}+\frac{\bar{x}_{p}^{(p)}}{\Sigma_{p,p}^{(p)}}\right) & ,\\
+\\
+\langle x_{p}^{2}\rangle_{Q}=\left[\frac{1}{d_{p}}+\frac{1}{\Sigma_{p,p}^{(p)}}\right]^{-1}+\langle x_{p}\rangle_{Q}^{2} & .
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Equating these moments with the ones of the tilted distributions and expressing
+ these condition with respect to 
+\begin_inset Formula $a_{p}$
+\end_inset
+
+ and 
+\begin_inset Formula $d_{p}$
+\end_inset
+
+ one is left with EP equations:
+\begin_inset Formula 
+\[
+\begin{cases}
+d_{p}=\left[\frac{1}{\langle x_{p}^{2}\rangle_{Q^{(p)}}-\langle x_{p}\rangle_{Q^{(p)}}^{2}}-\frac{1}{\Sigma_{p,p}^{(p)}}\right]^{-1} & ,\\
+\\
+a_{p}=\langle x_{p}\rangle_{Q^{(p)}}+\frac{d_{p}}{\Sigma_{p,p}^{(p)}}\left(\langle x_{p}\rangle_{Q^{(p)}}-\bar{x}_{p}^{(p)}\right) & .
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since the inverse covariance matrices 
+\begin_inset Formula $\Sigma$
+\end_inset
+
+ and 
+\begin_inset Formula $\Sigma_{(p)}$
+\end_inset
+
+ differ for just a single entry, we can rely on the Sherman-Morrison formula:
+\begin_inset Formula 
+\[
+\Sigma^{(p)}=\Sigma+\frac{\Sigma\mathbf{e}_{p}\mathbf{e}_{p}^{T}\Sigma}{d_{p}-\Sigma_{p,p}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\Sigma_{p,p}^{(p)}=\frac{\Sigma_{p,p}}{1-\frac{\Sigma_{p,p}}{d_{p}}}.
+\]
+
+\end_inset
+
+Moreover, we can exploit again the formula for the product between two gaussian
+ to express 
+\begin_inset Formula $\bar{x}_{p}^{(p)}$
+\end_inset
+
+ as a function of 
+\begin_inset Formula $\bar{x}_{p}$
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+\bar{x}_{p}^{(p)}=\Sigma_{p,p}^{(p)}\left(\frac{\bar{x}_{p}}{\Sigma_{p,p}}-\frac{a_{p}}{d_{p}}\right)=\frac{d_{p}\bar{x}_{p}-a_{p}\Sigma_{p,p}}{d_{p}-\Sigma_{p,p}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let us recall the steps of the EP algorithm:
+\end_layout
+
+\begin_layout Itemize
+Initialize the parameters 
+\begin_inset Formula $a_{p}$
+\end_inset
+
+, 
+\begin_inset Formula $d_{p}$
+\end_inset
+
+ for 
+\begin_inset Formula $p=1,\dots,N+M$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Invert the matrix 
+\begin_inset Formula $\Sigma^{-1}=D-W$
+\end_inset
+
+ to obtain 
+\begin_inset Formula $\Sigma$
+\end_inset
+
+, possibly employing block matrix inversion.
+ Indeed:
+\begin_inset Formula 
+\[
+\Sigma^{-1}=\left(\begin{array}{cc}
+C & \mathrm{w}\\
+\mathrm{w}^{T} & B
+\end{array}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Given the current values of 
+\begin_inset Formula $a_{p}$
+\end_inset
+
+ and 
+\begin_inset Formula $d_{p}$
+\end_inset
+
+ compute the cavity moments:
+\begin_inset Formula 
+\[
+\bar{x}_{p}^{(p)}=\frac{d_{p}\bar{x}_{p}-a_{p}\Sigma_{p,p}}{d_{p}-\Sigma_{p,p}},
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\Sigma_{p,p}^{(p)}=\frac{d_{p}\Sigma_{p,p}}{d_{p}-\Sigma_{p,p}},
+\]
+
+\end_inset
+
+and the tilted moments marginal distributions 
+\begin_inset Formula $Q^{(p)}(x_{p})$
+\end_inset
+
+ together with its moments: 
+\begin_inset Formula $\langle x_{p}\rangle_{Q^{(p)}}$
+\end_inset
+
+, 
+\begin_inset Formula $\langle x_{p}^{2}\rangle_{Q^{(p)}}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+Update the marginal variance 
+\begin_inset Formula $\Sigma_{p,p}=\langle x_{p}^{2}\rangle_{Q^{(p)}}-\langle x_{p}^{2}\rangle_{Q^{(p)}}$
+\end_inset
+
+ and using moment matching conditions finally updated EP parameters 
+\begin_inset Formula $a_{p}$
+\end_inset
+
+ and 
+\begin_inset Formula $d_{p}$
+\end_inset
+
+ according to:
+\begin_inset Formula 
+\[
+d_{p}=\frac{\Sigma_{p,p}\Sigma_{p,p}^{(p)}}{\Sigma_{p,p}^{(p)}-\Sigma_{p,p}}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+a_{p}=\langle x_{p}\rangle_{Q^{(p)}}+\frac{d_{p}}{\Sigma_{p,p}^{(p)}}\left(\langle x_{p}\rangle_{Q^{(p)}}-\bar{x}_{p}^{(p)}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Repeat until convergence.
+\end_layout
+
+\begin_layout Section
+Gaussian RBM
+\end_layout
+
+\begin_layout Standard
+As a simple test of the effectiveness of the application of EP to RBM, is
+ to consider the analytically solvable case of Gaussian priors over the
+ hidden variables, that is 
+\begin_inset Formula $\mathcal{U}(h)=\gamma h^{2}/2-\theta h$
+\end_inset
+
+.
+ On the other hand we do not consider any prior over the visible variables,
+ or alternatively speaking, they have a uniform prior.
+ Since all the considered distributions are Gaussians, the tilted moments
+ can be readily computed:
+\begin_inset Formula 
+\[
+\langle h_{\nu}\rangle_{Q^{(\nu)}}\propto\int\mathrm{d}h_{\nu}h_{\nu}\exp\left[-\frac{1}{2}\frac{\left(h_{\nu}-\bar{h}_{\nu}^{(\nu)}\right)^{2}}{\Sigma_{\nu,\nu}^{(\nu)}}\right]\exp\left[-\frac{\gamma_{\nu}}{2}h_{\nu}^{2}+\theta_{\nu}h_{\nu}\right]=\frac{\bar{h}_{\nu}^{(\nu)}+\theta_{\nu}\gamma_{\nu}}{1+\gamma_{\nu}\Sigma_{\nu,\nu}^{(\nu)}}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\langle h_{\nu}^{2}\rangle_{Q^{(\nu)}}=\frac{\Sigma_{\nu,\nu}^{(\nu)}}{1+\gamma_{\nu}\Sigma_{\nu.\nu}^{(\nu)}}+\langle h_{\nu}\rangle_{Q^{(\nu)}}^{2}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\langle v_{j}\rangle_{Q^{(j)}}\propto\int\mathrm{d}v_{j}v_{j}\exp\left[-\frac{1}{2}\frac{\left(v_{j}-\bar{v}_{j}^{(j)}\right)^{2}}{\Sigma_{j,j}^{(j)}}\right]=\bar{v}_{j}^{(j)}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\langle v_{j}^{2}\rangle_{Q^{(j)}}=\Sigma_{j,j}^{(j)}+\left(\bar{v}_{j}^{(j)}\right)^{2}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Tilted Moments Computation
+\end_layout
+
+\begin_layout Standard
+In this section we present the computation of the tilted moments, which
+ depends on the specific choice of the prior distribution.
+\end_layout
+
+\begin_layout Subsection
+Theta Prior
+\end_layout
+
+\begin_layout Standard
+To begin with let's consider the case in which the priors over the hidden
+ variables is a theta function, that is 
+\begin_inset Formula $\psi_{k}(h_{k})=\Theta(h_{k})$
+\end_inset
+
+, where the Heaviside function is defined as:
+\begin_inset Formula 
+\[
+\Theta(x)=\begin{cases}
+1 & x\geq0,\\
+0 & x<0.
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The marginal tilted distribution is defined as 
+\begin_inset Formula $Q^{(k)}(h_{k})=\frac{1}{Z_{Q^{(k)}}}Q^{\backslash k}(h_{k})\psi_{k}(h_{k})$
+\end_inset
+
+, whereas the cavity distribution has expression:
+\begin_inset Formula 
+\[
+Q^{\backslash k}(h_{k})=\frac{1}{\sqrt{2\pi\Sigma_{k}}}\exp\left[-\frac{1}{2}\frac{(h_{k}-\mu_{k})^{2}}{\Sigma_{k}}\right],
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where we re-labeled 
+\begin_inset Formula $\bar{h}_{k}^{(k)}=\mu_{k}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Sigma_{k,k}^{(k)}=\Sigma_{k}$
+\end_inset
+
+.
+ First of all we need to compute the normalization factor 
+\begin_inset Formula $Z_{Q^{(k)}}$
+\end_inset
+
+, which is defined as:
+\begin_inset Formula 
+\begin{align*}
+Z_{Q^{(k)}} & =\frac{1}{\sqrt{2\pi\Sigma_{k}}}\int_{-\infty}^{+\infty}\mathrm{d}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{(h_{k}-\mu_{k})^{2}}{\Sigma_{k}}}\Theta(h_{k})\\
+= & \frac{1}{\sqrt{2\pi\Sigma_{k}}}\int_{0}^{+\infty}\mathrm{d}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{(h_{k}-\mu_{k})^{2}}{\Sigma_{k}}}\;\;\;\;\;\;\;\;\;y=h_{k}-\mu_{k}\\
+= & \frac{1}{\sqrt{2\pi\Sigma_{k}}}\int_{-\mu_{k}}^{+\infty}\mathrm{d}y\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}\;\;\;\;\;\;\;\;\;\;\;\;\;\;x=y/\sqrt{2\Sigma_{k}}\\
+= & \frac{1}{\sqrt{\pi}}\int_{-\frac{\mu_{k}}{\sqrt{2\Sigma_{k}}}}^{+\infty}\mathrm{d}x\mathrm{e}^{-x^{2}}=\frac{1}{\sqrt{\pi}}\left[\int_{0}^{+\infty}\mathrm{d}x\mathrm{e}^{-x^{2}}+\int_{0}^{\frac{\mu_{k}}{\sqrt{2\Sigma_{k}}}}\mathrm{d}x\mathrm{e}^{-x^{2}}\right]\\
+= & \frac{1}{2}+\frac{1}{2}\frac{2}{\sqrt{\pi}}\int_{0}^{\frac{\mu_{k}}{\sqrt{2\Sigma_{k}}}}\mathrm{d}x\mathrm{e}^{-x^{2}}=\frac{1}{2}\left[1+\mathrm{erf}(\frac{\mu_{k}}{\sqrt{2\Sigma_{k}}})\right],
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where we introduced the error function 
+\begin_inset Formula $\mathrm{erf}(x)=\frac{2}{\sqrt{\pi}}\int_{0}^{x}\mathrm{d}z\mathrm{e}^{-z^{2}}$
+\end_inset
+
+.
+ Where are now ready to compute the first and second tilted moments.
+ Let's begin with 
+\begin_inset Formula $\langle h_{k}\rangle_{Q^{(k)}}$
+\end_inset
+
+:
+\begin_inset Formula 
+\begin{align*}
+\langle h_{k}\rangle_{Q^{(k)}} & =\frac{1}{Z_{Q^{(k)}}}\int_{-\infty}^{+\infty}\mathrm{d}h_{k}h_{k}\frac{\mathrm{e}^{-\frac{1}{2}\frac{(h_{k}-\mu_{k})^{2}}{\Sigma_{k}}}}{\sqrt{2\pi\Sigma_{k}}}\Theta(h_{k})\\
+= & \frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{0}^{+\infty}\mathrm{d}h_{k}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{(h_{k}-\mu_{k})^{2}}{\Sigma_{k}}}\;\;\;\;\;\;\;\;\;y=h_{k}-\mu_{k}\\
+= & \frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{-\mu_{k}}^{+\infty}\mathrm{d}y\left[y+\mu_{k}\right]\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}\\
+= & \frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\left\{ \int_{-\mu_{k}}^{+\infty}\mathrm{d}yy\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}+\mu_{k}\int_{-\mu_{k}}^{+\infty}\mathrm{d}y\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}\right\} \\
+= & \mu_{k}+\frac{2\Sigma_{k}}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{-\frac{\mu_{k}}{\sqrt{2\Sigma_{k}}}}^{+\infty}\mathrm{d}xx\mathrm{e}^{-x^{2}}\\
+= & \mu_{k}+\frac{1}{Z_{Q^{(k)}}}\sqrt{\frac{\Sigma_{k}}{2\pi}}\mathrm{e}^{-\frac{\mu_{k}^{2}}{2\Sigma_{k}}}=\mu_{k}\left[1+\frac{R(\alpha_{k})}{\alpha_{k}}\right],
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+with 
+\begin_inset Formula $\alpha_{k}=\mu_{k}/\sqrt{\Sigma_{k}}$
+\end_inset
+
+, 
+\begin_inset Formula $R(x)=\frac{1}{\sqrt{2\pi}}\frac{\mathrm{e}^{-x^{2}/2}}{\Phi(x)}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Phi(x)=\frac{1}{2}\left[1+\mathrm{erf}(\frac{x}{\sqrt{2}})\right]$
+\end_inset
+
+, which is the cumulative function of the standard Gaussian distribution.
+ Similarly, we can compute the second moment:
+\begin_inset Formula 
+\begin{align*}
+\langle h_{k}^{2}\rangle_{Q^{(k)}} & =\frac{1}{Z_{Q^{(k)}}}\int_{-\infty}^{+\infty}\mathrm{d}h_{k}h_{k}^{2}\frac{\mathrm{e}^{-\frac{1}{2}\frac{(h_{k}-\mu_{k})^{2}}{\Sigma_{k}}}}{\sqrt{2\pi\Sigma_{k}}}\Theta(h_{k})\\
+= & \frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{-\mu_{k}}^{+\infty}\mathrm{d}y\left[y+\mu_{k}\right]^{2}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}\\
+= & \frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{-\mu_{k}}^{+\infty}\mathrm{d}y\left[y^{2}+\mu_{k}^{2}+2y\mu_{k}\right]\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The only new integral to be computed is 
+\begin_inset Formula $\int_{-\mu_{k}}^{+\infty}\mathrm{d}yy^{2}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}$
+\end_inset
+
+, the others have been already computed previously, so:
+\begin_inset Formula 
+\begin{align*}
+\frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{-\mu_{k}}^{+\infty}\mathrm{d}y\mu_{k}^{2}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}} & =\mu_{k}^{2}\\
+\frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{-\mu_{k}}^{+\infty}\mathrm{d}y2y\mu_{k}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}} & =2\mu_{k}\sqrt{\Sigma_{k}}R(\alpha_{k})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let's now compute the final contribution:
+\begin_inset Formula 
+\begin{align*}
+\int_{-\mu_{k}}^{+\infty}\mathrm{d}yy^{2}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}} & =\int_{0}^{+\infty}\mathrm{d}yy^{2}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}+\int_{0}^{\mu_{k}}\mathrm{d}yy^{2}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}}\\
+= & (2\Sigma_{k})^{3/2}\left[\int_{0}^{+\infty}\mathrm{d}xx^{2}\mathrm{e}^{-x^{2}}+\int_{0}^{\mu_{k}/\sqrt{2\Sigma_{k}}}\mathrm{d}xx^{2}\mathrm{e}^{-x^{2}}\right]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To find the expression of the two summands we can exploit the following
+ relations:
+\begin_inset Formula 
+\begin{align*}
+\int_{0}^{+\infty}\mathrm{d}xx^{2n}\mathrm{e}^{-\alpha x^{2}} & =\left(-\frac{\partial}{\partial\alpha}\right)^{n}\int_{0}^{+\infty}\mathrm{d}x\mathrm{e}^{-\alpha x^{2}}=\left(-\frac{\partial}{\partial\alpha}\right)^{n}\frac{1}{2}\sqrt{\frac{\pi}{\alpha}}=\frac{\sqrt{\pi}(2n-1)!!}{2^{n+1}}\alpha^{-(2n+1)/2}\\
+\int_{0}^{a}\mathrm{d}xx^{2}\mathrm{e}^{-\alpha x^{2}} & =-\frac{\partial}{\partial\alpha}\int_{0}^{a}\mathrm{d}x\mathrm{e}^{-\alpha x^{2}}=-\frac{\partial}{\partial\alpha}\left[\frac{1}{\sqrt{\alpha}}\int_{0}^{a\sqrt{\alpha}}\mathrm{d}z\mathrm{e}^{-z^{2}}\right]=-\frac{\partial}{\partial\alpha}\left[\frac{1}{2}\sqrt{\frac{\pi}{\alpha}}\mathrm{erf}(a\sqrt{\alpha})\right]\\
+= & \frac{1}{4}\sqrt{\pi}\alpha^{-3/2}\mathrm{erf}(a\sqrt{\alpha})-\frac{a}{2\alpha}\mathrm{e}^{-a^{2}\alpha}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We will employ these relations by setting 
+\begin_inset Formula $\alpha=1$
+\end_inset
+
+.
+ Thus, the first summand becomes 
+\begin_inset Formula $\int_{0}^{+\infty}\mathrm{d}xx^{2}\mathrm{e}^{-x^{2}}=\frac{\sqrt{\pi}}{4}$
+\end_inset
+
+, whereas yields by identifying 
+\begin_inset Formula $a=\mu_{k}/\sqrt{2\Sigma_{k}}$
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+\int_{0}^{\mu_{k}/\sqrt{2\Sigma_{k}}}\mathrm{d}xx^{2}\mathrm{e}^{-x^{2}}=\frac{\sqrt{\pi}}{4}\mathrm{erf}(\frac{\mu_{k}}{\sqrt{2\Sigma_{k}}})-\frac{\mu_{k}}{2\sqrt{2\Sigma_{k}}}\mathrm{e}^{-\frac{\mu_{k}^{2}}{2\Sigma_{k}}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally we obtain:
+\begin_inset Formula 
+\begin{align*}
+\frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{-\mu_{k}}^{+\infty}\mathrm{d}yy^{2}\mathrm{e}^{-\frac{y^{2}}{2\Sigma_{k}}} & =\frac{1}{Z_{Q^{(k)}}}\left\{ \frac{\Sigma_{k}}{2}\left[1+\mathrm{erf}(\frac{\mu_{k}}{\sqrt{2\Sigma_{k}}})\right]-\mu_{k}\sqrt{\frac{\Sigma_{k}}{2\pi}}\mathrm{e}^{-\frac{\mu_{k}^{2}}{2\Sigma_{k}}}\right\} \\
+= & \Sigma_{k}-\sqrt{\Sigma_{k}}\mu_{k}R(\alpha_{k})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Putting every term together the second moment reads:
+\begin_inset Formula 
+\[
+\langle h_{k}^{2}\rangle_{Q^{(k)}}=\mu_{k}^{2}+\Sigma_{k}+\mu_{k}\sqrt{\Sigma_{k}}R(\alpha_{k})
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Consequently the variance becomes:
+\begin_inset Formula 
+\[
+\mathrm{Var}_{Q^{(k)}}\left[h_{k}\right]=\Sigma_{k}\left[1-R(\alpha_{k})-\alpha_{k}R(\alpha_{k})\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This concludes moments computation for the theta prior.
+\end_layout
+
+\begin_layout Subsection
+ReLU Transfer Function
+\end_layout
+
+\begin_layout Standard
+We will now discuss moments calculation for the so called ReLU prior.
+ To be more precise, it is the activation function that possesses the ReLU
+ appearance.
+ The potential generating such activation function reads:
+\begin_inset Formula 
+\[
+\mathcal{U^{\mathrm{ReLU}}}(h)=\begin{cases}
+\gamma\frac{h^{2}}{2}-\theta h & h\geq0,\\
++\infty & h<0.
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Thus identifying it with a truncated quadratic potential.
+ Exploiting the results of the previous subsection we can readily compute
+ the first and second moments with respect to the tilted distribution:
+\begin_inset Formula 
+\[
+Q^{(k)}(h_{k})=\frac{1}{Z_{Q^{(k)}}}Q^{\backslash k}(h_{k})\psi_{k}(h_{k})=\frac{1}{Z_{Q^{(k)}}}\frac{\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}}}{\sqrt{2\pi\Sigma_{k}}}\mathrm{e}^{-\gamma_{k}\frac{h_{k}^{2}}{2}+\theta h_{k}}\Theta(h_{k})
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can employ the formulas for the product of two Gaussians to cast in a
+ compact form the exponent:
+\begin_inset Formula 
+\[
+\begin{cases}
+m_{k}=\frac{\mu_{k}+\theta\Sigma_{k}}{1+\gamma_{k}\Sigma_{k}} & ,\\
+s_{k}=\frac{\Sigma_{k}}{1+\gamma_{k}\Sigma_{k}} & .
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+So that the tilted distribution reads:
+\begin_inset Formula 
+\[
+Q^{(k)}(h_{k})=\frac{1}{Z_{Q^{(k)}}}\frac{\Theta(h_{k})}{\sqrt{2\pi\Sigma_{k}}}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-m_{k}\right)^{2}}{s_{k}}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let's begin with the computation of the normalization factor:
+\begin_inset Formula 
+\begin{align*}
+Z_{Q^{(k)}} & =\int_{-\infty}^{+\infty}\mathrm{d}h_{k}\frac{\Theta(h_{k})}{\sqrt{2\pi\Sigma_{k}}}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-m_{k}\right)^{2}}{s_{k}}}\\
+= & \frac{1}{\sqrt{2\pi\Sigma_{k}}}\int_{0}^{+\infty}\mathrm{d}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-m_{k}\right)^{2}}{s_{k}}}\\
+= & \frac{\sqrt{2s_{k}}}{\sqrt{2\pi\Sigma_{k}}}\int_{-\frac{m_{k}}{\sqrt{2s_{k}}}}^{+\infty}\mathrm{d}x\mathrm{e}^{-x^{2}}\\
+= & \sqrt{\frac{s_{k}}{\Sigma_{k}}}\left[\frac{1}{2}+\mathrm{\frac{1}{2}\mathrm{erf}}(\frac{m_{k}}{\sqrt{2s_{k}}}))\right]=\frac{1}{\sqrt{1+\gamma_{k}\Sigma_{k}}}\Phi(\frac{m_{k}}{\sqrt{s_{k}}})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Which is equal to the one obtained for the theta prior up to a pre-factor
+ 
+\begin_inset Formula $1/\sqrt{1+\gamma_{k}\Sigma_{k}}$
+\end_inset
+
+.
+ Moving to the first two moments we have:
+\begin_inset Formula 
+\begin{align*}
+\langle h_{k}\rangle_{Q^{(k)}} & =\frac{1}{Z_{Q^{(k)}}}\int_{-\infty}^{+\infty}\mathrm{d}h_{k}h_{k}\frac{\mathrm{e}^{-\frac{1}{2}\frac{(h_{k}-m_{k})^{2}}{s_{k}}}}{\sqrt{2\pi\Sigma_{k}}}\Theta(h_{k})\\
+= & \frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\int_{0}^{+\infty}\mathrm{d}h_{k}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{(h_{k}-m_{k})^{2}}{s_{k}}}\\
+= & m_{k}+\frac{\sqrt{1+\gamma_{k}\Sigma_{k}}}{\Phi(\frac{m_{k}}{\sqrt{s_{k}}})}\frac{\Sigma_{k}}{(1+\gamma_{k}\Sigma_{k})\sqrt{2\pi\Sigma_{k}}}\mathrm{e}^{-\frac{m_{k}^{2}}{2s_{k}}}\\
+= & m_{k}+\sqrt{s_{k}}R(\frac{m_{k}}{\sqrt{s_{k}}})
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Analogously we can compute the second moment, which will have the same expressio
+n of the theta prior case, up to the substitution 
+\begin_inset Formula $\mu_{k}\rightarrow m_{k}$
+\end_inset
+
+, 
+\begin_inset Formula $\Sigma_{k}\rightarrow s_{k}$
+\end_inset
+
+ and 
+\begin_inset Formula $\alpha_{k}=m_{k}/\sqrt{s_{k}}$
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+\langle h_{k}^{2}\rangle_{Q^{(k)}}=m_{k}^{2}+m_{k}\sqrt{s_{k}}R(\alpha_{k})+s_{k}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+dReLU Transfer Function
+\end_layout
+
+\begin_layout Standard
+The double rectified transfer function is a slight variation of the ReLU
+ case presented before.
+ In this case the potential defining the prior has expression:
+\begin_inset Formula 
+\[
+\mathcal{U}^{\mathrm{dReLU}}(h)=\begin{cases}
+\frac{\gamma_{+}}{2}h^{2}-\theta_{+}h & h>0,\\
+\frac{\gamma_{-}}{2}h^{2}-\theta_{-}h & h<0.
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We treat here the general case in which 
+\begin_inset Formula $\theta_{\pm}$
+\end_inset
+
+ are non zero, but will be probably set so in practical scenarios.
+ Moreover, we shall consider the case having 
+\begin_inset Formula $0<\gamma_{-}\ll1$
+\end_inset
+
+, for which the negative 
+\begin_inset Formula $h$
+\end_inset
+
+ region has a transfer function which is linear but with a really small
+ slope.
+ The tilted distribution generated by dReLU potential has expression:
+\begin_inset Formula 
+\[
+Q^{(k)}(h_{k})=\frac{1}{Z_{Q^{(k)}}}\left[\Theta(h_{k})\frac{\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}}}{\sqrt{2\pi\Sigma_{k}}}\mathrm{e}^{-\frac{1}{2}\gamma_{+}h_{k}^{2}+\theta_{+}h_{k}}+\Theta(-h_{k})\frac{\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}}}{\sqrt{2\pi\Sigma_{k}}}\mathrm{e}^{-\frac{1}{2}\gamma_{-}h_{k}^{2}+\theta_{-}h_{k}}\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Consequently, the normalization factor will read:
+\begin_inset Formula 
+\[
+Z_{Q^{(k)}}=\int_{-\infty}^{+\infty}\mathrm{d}h_{k}Q^{(k)}(h_{k})=\frac{1}{\sqrt{2\pi\Sigma_{k}}}\left[\int_{0}^{+\infty}\mathrm{d}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}-\frac{1}{2}\gamma_{+}h_{k}^{2}+\theta_{+}h_{k}}+\int_{-\infty}^{0}\mathrm{d}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}-\frac{1}{2}\gamma_{-}h_{k}^{2}+\theta_{-}h_{k}}\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can define two different Gaussians resulting by the products between
+ the cavity one and the two branches of the potential:
+\begin_inset Formula 
+\[
+\begin{cases}
+m_{k}^{+}=\frac{\mu_{k}+\theta_{+}\Sigma_{k}}{1+\gamma_{+}\Sigma_{k}} & ,\\
+\\
+s_{k}^{+}=\frac{\Sigma_{k}}{1+\gamma_{+}\Sigma_{k}} & ,\\
+\\
+m_{k}^{-}=\frac{\mu_{k}+\theta_{-}\Sigma_{k}}{1+\gamma_{-}\Sigma_{k}} & ,\\
+\\
+s_{k}^{-}=\frac{\Sigma_{k}}{1+\gamma_{-}\Sigma_{k}} & .
+\end{cases}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The contribution between 0 and 
+\begin_inset Formula $+\infty$
+\end_inset
+
+ it's the same of the single ReLU case, whereas the second one reads:
+\begin_inset Formula 
+\[
+\frac{1}{\sqrt{2\pi\Sigma_{k}}}\int_{-\infty}^{0}\mathrm{d}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}-\frac{1}{2}\gamma_{-}h_{k}^{2}+\theta_{-}h_{k}}=\frac{1}{2}\frac{1}{\sqrt{1+\gamma_{-}\Sigma_{k}}}\left[1-\mathrm{erf}(\frac{m_{k}^{-}}{\sqrt{2s_{k}^{-}}})\right]=\frac{1}{\sqrt{1+\gamma_{-}\Sigma_{k}}}\Psi\left(\frac{m_{k}^{-}}{\sqrt{s_{k}^{-}}}\right),
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where we introduced the function 
+\begin_inset Formula $\Psi(x)=\frac{1}{2}\left[1-\mathrm{erf}\left(\frac{x}{\sqrt{2}}\right)\right]$
+\end_inset
+
+.
+ Thus the global normalization factor becomes:
+\begin_inset Formula 
+\[
+Z_{Q^{(k)}}=\frac{1}{\sqrt{1+\gamma_{+}\Sigma_{k}}}\Phi\left(\frac{m_{k}^{+}}{\sqrt{s_{k}^{+}}}\right)+\frac{1}{\sqrt{1+\gamma_{-}\Sigma_{k}}}\Psi\left(\frac{m_{k}^{-}}{\sqrt{s_{k}^{-}}}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Regarding the moments we have:
+\begin_inset Formula 
+\begin{align*}
+\langle h_{k}\rangle_{Q^{(k)}} & =\frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\left[\int_{0}^{+\infty}\mathrm{d}h_{k}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}-\frac{1}{2}\gamma_{+}h_{k}^{2}+\theta_{+}h_{k}}+\int_{-\infty}^{0}\mathrm{d}h_{k}h_{k}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}-\frac{1}{2}\gamma_{-}h_{k}^{2}+\theta_{-}h_{k}}\right]\\
+= & \frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\left[m_{k}^{+}\sqrt{2\pi s_{k}^{+}}\Phi\left(\frac{m_{k}^{+}}{\sqrt{s_{k}^{+}}}\right)+s_{k}^{+}\mathrm{e}^{-\frac{\left(m_{k}^{+}\right)^{2}}{2s_{k}^{+}}}+m_{k}^{-}\sqrt{2\pi s_{k}^{-}}\Psi\left(\frac{m_{k}^{-}}{\sqrt{s_{k}^{-}}}\right)-s_{k}^{-}\mathrm{e}^{-\frac{\left(m_{k}^{-}\right)^{2}}{2s_{k}^{-}}}\right]\\
+= & \frac{1}{Z_{Q^{(k)}}}\left[\frac{m_{k}^{+}}{\sqrt{1+\gamma_{+}\Sigma_{k}}}\Phi\left(\frac{m_{k}^{+}}{\sqrt{s_{k}^{+}}}\right)+\frac{\sqrt{\Sigma_{k}}}{1+\gamma_{+}\Sigma_{k}}\frac{\mathrm{e}^{-\frac{\left(m_{k}^{+}\right)^{2}}{2s_{k}^{+}}}}{\sqrt{2\pi}}+\frac{m_{k}^{-}}{\sqrt{1+\gamma_{-}\Sigma_{k}}}\Psi\left(\frac{m_{k}^{-}}{\sqrt{s_{k}^{-}}}\right)-\frac{\sqrt{\Sigma_{k}}}{1+\gamma_{-}\Sigma_{k}}\frac{\mathrm{e}^{-\frac{\left(m_{k}^{-}\right)^{2}}{2s_{k}^{-}}}}{\sqrt{2\pi}}\right]\\
+= & \frac{\left[m_{k}^{+}\sqrt{1+\gamma_{-}\Sigma_{k}}\Phi\left(\alpha_{k}^{+}\right)+m_{k}^{-}\sqrt{1+\gamma_{+}\Sigma_{k}}\Psi\left(\alpha_{k}^{-}\right)\right]}{\sqrt{1+\gamma_{-}\Sigma_{k}}\Phi\left(\alpha_{k}^{+}\right)+\sqrt{1+\gamma_{+}\Sigma_{k}}\Psi\left(\alpha_{k}^{-}\right)}+\sqrt{s_{k}^{+}}\partial_{\alpha_{k}^{+}}\Xi\left(\alpha_{k}^{+},\alpha_{k}^{-}\right)+\sqrt{s_{k}^{-}}\partial_{\alpha_{k}^{-}}\Xi\left(\alpha_{k}^{+},\alpha_{k}^{-}\right),
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where we introduced the function 
+\begin_inset Formula $\Xi\left(\alpha_{k}^{+},\alpha_{k}^{-}\right)=\ln\left[\sqrt{1+\gamma_{-}\Sigma_{k}}\Phi\left(\alpha_{k}^{+}\right)+\sqrt{1+\gamma_{+}\Sigma_{k}}\Psi\left(\alpha_{k}^{-}\right)\right]$
+\end_inset
+
+ and we remind that 
+\begin_inset Formula $\alpha_{k}^{\pm}=m_{k}^{\pm}/\sqrt{s_{k}^{\pm}}$
+\end_inset
+
+.
+ We can now move to the second moment:
+\begin_inset Formula 
+\[
+\langle h_{k}^{2}\rangle_{Q^{(k)}}=\frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\left[\int_{0}^{+\infty}\mathrm{d}h_{k}h_{k}^{2}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}-\frac{1}{2}\gamma_{+}h_{k}^{2}+\theta_{+}h_{k}}+\int_{-\infty}^{0}\mathrm{d}h_{k}h_{k}^{2}\mathrm{e}^{-\frac{1}{2}\frac{\left(h_{k}-\mu_{k}\right)^{2}}{\Sigma_{k}}-\frac{1}{2}\gamma_{-}h_{k}^{2}+\theta_{-}h_{k}}\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let's split the computation, starting from the first integral:
+\begin_inset Formula 
+\begin{align*}
+ & \int_{0}^{+\infty}\mathrm{d}h_{k}h_{k}^{2}\mathrm{e}^{-\frac{\left(h_{k}-m_{k}^{+}\right)^{2}}{2s_{k}^{+}}}=\int_{-m_{k}^{+}}^{+\infty}\mathrm{d}y\left(y+m_{k}^{+}\right)^{2}\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{+}}}\\
+= & \int_{-m_{k}^{+}}^{+\infty}\mathrm{d}yy^{2}\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{+}}}+2m_{k}^{+}\int_{-m_{k}^{+}}^{+\infty}\mathrm{d}yy\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{+}}}+(m_{k}^{+})^{2}\int_{-m_{k}^{+}}^{+\infty}\mathrm{d}y\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{+}}}\\
+= & (m_{k}^{+})^{2}\sqrt{2\pi s_{k}^{+}}\Phi(\alpha_{k}^{+})+2m_{k}^{+}s_{k}^{+}\mathrm{e}^{-\frac{\left(m_{k}^{+}\right)^{2}}{2s_{k}^{+}}}+(s_{k}^{+})^{3/2}\sqrt{2\pi}\Phi(\alpha_{k}^{+})-m_{k}^{+}s_{k}^{+}\mathrm{e}^{-\frac{(m_{k}^{+})^{2}}{2s_{k}^{+}}}\\
+= & (m_{k}^{+})^{2}\sqrt{2\pi s_{k}^{+}}\Phi(\alpha_{k}^{+})+m_{k}^{+}s_{k}^{+}\mathrm{e}^{-\frac{\left(m_{k}^{+}\right)^{2}}{2s_{k}^{+}}}+(s_{k}^{+})^{3/2}\sqrt{2\pi}\Phi(\alpha_{k}^{+}),
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+whereas the second reads:
+\begin_inset Formula 
+\begin{align*}
+ & \int_{-\infty}^{0}\mathrm{d}h_{k}h_{k}^{2}\mathrm{e}^{-\frac{\left(h_{k}-m_{k}^{-}\right)^{2}}{2s_{k}^{-}}}=\int_{-\infty}^{-m_{k}^{-}}\mathrm{d}y\left(y+m_{k}^{-}\right)^{2}\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{-}}}\\
+= & \int_{-\infty}^{-m_{k}^{-}}\mathrm{d}yy^{2}\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{-}}}+2m_{k}^{-}\int_{-\infty}^{-m_{k}^{-}}\mathrm{d}yy\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{-}}}+(m_{k}^{-})^{2}\int_{-\infty}^{-m_{k}^{-}}\mathrm{d}y\mathrm{e}^{-\frac{y^{2}}{2s_{k}^{-}}}\\
+= & (m_{k}^{-})^{2}\sqrt{2\pi s_{k}^{-}}\Psi(\alpha_{k}^{-})-2m_{k}^{-}s_{k}^{-}\mathrm{e}^{-\frac{(m_{k}^{-})^{2}}{2s_{k}^{-}}}+(s_{k}^{-})^{3/2}\sqrt{2\pi}\Psi(\alpha_{k}^{-})+m_{k}^{-}s_{k}^{-}\mathrm{e}^{-\frac{(m_{k}^{-})^{2}}{2s_{k}^{-}}}\\
+= & (m_{k}^{-})^{2}\sqrt{2\pi s_{k}^{-}}\Psi(\alpha_{k}^{-})-m_{k}^{-}s_{k}^{-}\mathrm{e}^{-\frac{(m_{k}^{-})^{2}}{2s_{k}^{-}}}+(s_{k}^{-})^{3/2}\sqrt{2\pi}\Psi(\alpha_{k}^{-}).
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Putting everything together yields:
+\begin_inset Formula 
+\begin{align*}
+\langle h_{k}^{2}\rangle_{Q^{(k)}} & =\frac{1}{Z_{Q^{(k)}}\sqrt{2\pi\Sigma_{k}}}\left\{ \sqrt{2\pi}\left[\Phi(\alpha_{k}^{+})\sqrt{\frac{\Sigma_{k}}{1+\gamma_{+}\Sigma_{k}}}\left[(m_{k}^{+})^{2}+\frac{\Sigma_{k}}{1+\gamma_{+}\Sigma_{k}}\right]+\Psi(\alpha_{k}^{-})\sqrt{\frac{\Sigma_{k}}{1+\gamma_{-}\Sigma_{k}}}\left[(m_{k}^{-})^{2}+\frac{\Sigma_{k}}{1+\gamma_{-}\Sigma_{k}}\right]\right]+m_{k}^{+}s_{k}^{+}\mathrm{e}^{-\frac{\left(m_{k}^{+}\right)^{2}}{2s_{k}^{+}}}-m_{k}^{-}s_{k}^{-}\mathrm{e}^{-\frac{\left(m_{k}^{-}\right)^{2}}{2s_{k}^{-}}}\right\} \\
+= & \frac{1}{Z_{Q^{(k)}}}\left\{ \frac{\Phi(\alpha_{k}^{+})}{\sqrt{1+\gamma_{+}\Sigma_{k}}}\left[(m_{k}^{+})^{2}+\frac{\Sigma_{k}}{1+\gamma_{+}\Sigma_{k}}\right]+\frac{\Psi(\alpha_{k}^{-})}{\sqrt{1+\gamma_{-}\Sigma_{k}}}\left[(m_{k}^{-})^{2}+\frac{\Sigma_{k}}{1+\gamma_{-}\Sigma_{k}}\right]+m_{k}^{+}\frac{\sqrt{\Sigma_{k}}}{1+\gamma_{+}\Sigma_{k}}\frac{\mathrm{e}^{-\frac{\left(m_{k}^{+}\right)^{2}}{2s_{k}^{+}}}}{\sqrt{2\pi}}-m_{k}^{-}\frac{\sqrt{\Sigma_{k}}}{1+\gamma_{-}\Sigma_{k}}\frac{\mathrm{e}^{-\frac{\left(m_{k}^{-}\right)^{2}}{2s_{k}^{-}}}}{\sqrt{2\pi}}\right\} \\
+= & \frac{\sqrt{1+\gamma_{-}\Sigma_{k}}\Phi(\alpha_{k}^{+})\left[(m_{k}^{+})^{2}+s_{k}^{+}\right]+\sqrt{1+\gamma_{+}\Sigma_{k}}\Psi(\alpha_{k}^{-})\left[(m_{k}^{-})^{2}+s_{k}^{-}\right]}{\sqrt{1+\gamma_{-}\Sigma_{k}}\Phi\left(\alpha_{k}^{+}\right)+\sqrt{1+\gamma_{+}\Sigma_{k}}\Psi\left(\alpha_{k}^{-}\right)}+m_{k}^{+}\sqrt{s_{k}^{+}}\partial_{\alpha_{k}^{+}}\Xi\left(\alpha_{k}^{+},\alpha_{k}^{-}\right)+m_{k}^{-}\sqrt{s_{k}^{-}}\partial_{\alpha_{k}^{-}}\Xi\left(\alpha_{k}^{+},\alpha_{k}^{-}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Binary Prior
+\end_layout
+
+\begin_layout Standard
+This kind of prior turns out to be relevant for the case in which the visible
+ variables refer to a 
+\begin_inset Formula $\emph{one-hot encoded}$
+\end_inset
+
+ representation of MSA.
+ Indeed, in this case each component of the large 
+\begin_inset Formula $L\times q$
+\end_inset
+
+ vector identifying a sequence can be either 0 or 1.
+ Consequently the prior over 
+\begin_inset Formula $v_{k}$
+\end_inset
+
+ will read:
+\begin_inset Formula 
+\[
+\chi_{k}(v_{k})=\rho\delta(v_{k})+(1-\rho)\delta(1-v_{k}),
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+and the full tilted probability density:
+\begin_inset Formula 
+\[
+Q^{(k)}(v_{k})=\frac{1}{Z_{Q^{(k)}}}Q^{\backslash k}(v_{k})\chi_{k}(v_{k})=\frac{1}{Z_{Q^{(k)}}}\frac{\mathrm{e}^{-\frac{1}{2\Sigma_{k}}\left(v_{k}-\mu_{k}\right)^{2}}}{\sqrt{2\pi\Sigma_{k}}}\left[\rho\delta(v_{k})+(1-\rho)\delta(1-v_{k})\right],
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where the normalization factor reads:
+\begin_inset Formula 
+\begin{align*}
+Z_{Q^{(k)}} & =\frac{1}{\sqrt{2\pi\Sigma_{k}}}\left[\rho\mathrm{e}^{-\frac{\mu_{k}^{2}}{2\Sigma_{k}}}+(1-\rho)\mathrm{e}^{-\frac{1}{2\Sigma_{k}}\left(1-\mu_{k}\right)^{2}}\right]\\
+= & \frac{\mathrm{e}^{-\frac{\mu_{k}^{2}}{2\Sigma_{k}}}}{\sqrt{2\pi\Sigma_{k}}}\left[\rho+(1-\rho)\mathrm{e}^{-\frac{1-2\mu_{k}}{2\Sigma_{k}}}\right]\\
+= & \frac{\mathrm{e}^{-\frac{1}{2\Sigma_{k}}\left(1-\mu_{k}\right)^{2}}}{\sqrt{2\pi\Sigma_{k}}}\left[\frac{\rho}{\theta}+(1-\rho)\right]
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Having defined 
+\begin_inset Formula $\theta=\exp\left\{ -\frac{1}{2\Sigma_{k}}\left(1-2\mu_{k}\right)\right\} $
+\end_inset
+
+.
+ In order to obtain an easier definition of the moments, we can define a
+ rescaled normalization factor (removing the common pre-factor):
+\begin_inset Formula 
+\[
+\tilde{Z}_{Q^{(k)}}=\frac{\rho}{\theta}+1-\rho=\rho\left(\frac{1}{\theta}-1\right)+1
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In this way the first two moments read:
+\begin_inset Formula 
+\begin{align*}
+\langle v_{k}\rangle_{Q^{(k)}}=\langle v_{k}^{2}\rangle_{Q^{(k)}} & =\frac{1-\rho}{\tilde{Z}_{Q^{(k)}}}.
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Consequently the variance reads 
+\begin_inset Formula $\mathrm{Var}_{Q^{(k)}}\left[v_{k}\right]=\langle v_{k}^{2}\rangle_{Q^{(k)}}-\langle v_{k}\rangle_{Q^{(k)}}^{2}=\frac{1-\rho}{\tilde{Z}_{Q^{(k)}}^{2}}\left[\tilde{Z}_{Q^{(k)}}+\rho-1\right]$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The potential energy associated to a binary prior is:
+\end_layout
+
+\begin_layout Section
+Positive definitiveness
+\end_layout
+
+\begin_layout Standard
+In this section we study the conditions under which that Gaussian matrix
+ distribution 
+\begin_inset Formula $\Sigma^{-1}$
+\end_inset
+
+ (and consequently the covariance matrix 
+\begin_inset Formula $\Sigma$
+\end_inset
+
+), defining the approximation of the distribution under study, is positive
+ definite.
+ In particular we focus on the case of interest for RBM.
+ In this case we can write the distribution matrix in a block form:
+\begin_inset Formula 
+\[
+\Sigma^{-1}=\left(\begin{array}{cc}
+B & w\\
+w^{T} & C
+\end{array}\right),
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $w$
+\end_inset
+
+ is the 
+\begin_inset Formula $N\times M$
+\end_inset
+
+ matrix of the weights connecting visible and hidden variables.
+ On the other hand, 
+\begin_inset Formula $B$
+\end_inset
+
+ and 
+\begin_inset Formula $C$
+\end_inset
+
+ are diagonal matrix, having as elements the inverse of variance of the
+ univariate Gaussian factor, whose values (together with the averages) define
+ the final approximate distribution 
+\begin_inset Formula $Q(\mathbf{v},\mathbf{h})$
+\end_inset
+
+.
+ More specifically 
+\begin_inset Formula $B$
+\end_inset
+
+ is 
+\begin_inset Formula $N\times N$
+\end_inset
+
+ matrix, whereas 
+\begin_inset Formula $C$
+\end_inset
+
+ is 
+\begin_inset Formula $M\times M$
+\end_inset
+
+:
+\begin_inset Formula 
+\begin{align*}
+B & =\left(\begin{array}{cccc}
+\frac{1}{b_{1}} & 0 & \cdots & 0\\
+0 & \frac{1}{b_{2}} & \cdots & 0\\
+\vdots &  & \ddots & \vdots\\
+0 & \cdots & \cdots & \frac{1}{b_{N}}
+\end{array}\right),\\
+C & =\left(\begin{array}{cccc}
+\frac{1}{c_{1}} & 0 & \cdots & 0\\
+0 & \frac{1}{c2} & \cdots & 0\\
+\vdots &  & \ddots & \vdots\\
+0 & \cdots & \cdots & \frac{1}{c_{M}}
+\end{array}\right).
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Thus, the overall matrix 
+\begin_inset Formula $\Sigma^{-1}$
+\end_inset
+
+, is made up of a diagonal part, defined by 
+\begin_inset Formula $B$
+\end_inset
+
+ and 
+\begin_inset Formula $C$
+\end_inset
+
+ and two out of diagonal contributions defined respectively by 
+\begin_inset Formula $w$
+\end_inset
+
+ and 
+\begin_inset Formula $w^{T}$
+\end_inset
+
+.
+ In the absence of Gaussian factors, the distribution matrix will be:
+\begin_inset Formula 
+\[
+W=\left(\begin{array}{cc}
+0 & w\\
+w^{T} & 0
+\end{array}\right).
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We ask ourselves an elementary question: which is the minimum constant value
+ to be added on the diagonal of 
+\begin_inset Formula $W$
+\end_inset
+
+ in order to make the matrix distribution positive definite?
+\end_layout
+
+\begin_layout Standard
+To answer this question we use the relationship on eigenvalues 
+\begin_inset Formula $\mathrm{eig}(A+c\mathbf{1})=\mathrm{eig}(A)+c$
+\end_inset
+
+.
+ So in order to guarantee that all eigenvalues are positive, it is sufficient
+ to choose 
+\begin_inset Formula $c$
+\end_inset
+
+ to be slightly larger than the smallest eigenvalue of 
+\begin_inset Formula $A$
+\end_inset
+
+.
+ Let's define the eigenvalue problem for the matrix 
+\begin_inset Formula $W$
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+\mathrm{det}(W-\lambda\mathbf{1})=\mathrm{det}\left(\begin{array}{cc}
+-\lambda\mathbf{1}_{N} & w\\
+w^{T} & -\lambda\mathbf{1}_{M}
+\end{array}\right)=0
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To compute such determinant we may rely on the expression for the determinant
+ of a block matrix:
+\begin_inset Formula 
+\[
+\mathrm{det}\left(\begin{array}{cc}
+A & B\\
+C & D
+\end{array}\right)=\mathrm{det}(D)\mathrm{det}(A-BD^{-1}C),
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where in our case we have 
+\begin_inset Formula $A=-\lambda\mathbf{1}_{N}$
+\end_inset
+
+, 
+\begin_inset Formula $B=w$
+\end_inset
+
+, 
+\begin_inset Formula $C=w^{T}$
+\end_inset
+
+ and 
+\begin_inset Formula $D=-\lambda\mathbf{1}_{M}$
+\end_inset
+
+.
+ In order to invert the matrix 
+\begin_inset Formula $D$
+\end_inset
+
+ we have to suppose that 
+\begin_inset Formula $\lambda\neq0$
+\end_inset
+
+.
+ This is the most delicate hypothesis, and we will get back to this point
+ later on.
+ We have then:
+\begin_inset Formula 
+\[
+\mathrm{det}(W-\lambda\mathbf{1}_{N+M})=(-\lambda)^{M}\mathrm{det}\left(\frac{ww^{T}}{\lambda}-\lambda\mathbf{1}_{N}\right)=0
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This provide us with 
+\begin_inset Formula $M$
+\end_inset
+
+ null eigenvalues.
+ By construction, we know that the rank of 
+\begin_inset Formula $W$
+\end_inset
+
+ is 
+\begin_inset Formula $2M$
+\end_inset
+
+.
+ This implies that the number of zero eigenvalues must be equal to 
+\begin_inset Formula $N-M$
+\end_inset
+
+, so that there are still 
+\begin_inset Formula $N-2M$
+\end_inset
+
+ null eigenvalues.
+ However, we are only interested in determining the largest absolute value
+ eigenvalue, which is certainly non zero.
+ So, supposing 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ different from zero in the second factor of the eigenvalue equation we
+ are left with:
+\begin_inset Formula 
+\[
+\mathrm{det}\left(ww^{T}-\lambda^{2}\mathbf{1}_{N}\right)=0
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This implies that the non-zero eigenvalues of 
+\begin_inset Formula $W$
+\end_inset
+
+ are determined by the square root of the eigenvalues of 
+\begin_inset Formula $ww^{T},$
+\end_inset
+
+ which are certainly positive (indeed it is symmetric and positive definite),
+ in other words 
+\begin_inset Formula $\lambda^{(W)}=\pm\sqrt{\lambda^{(ww^{T})}}$
+\end_inset
+
+, for 
+\begin_inset Formula $\lambda^{(W)}\neq0$
+\end_inset
+
+.
+ The sought additive constant will be then defined as 
+\begin_inset Formula $c=\sqrt{\mathrm{max}_{\lambda}\left[\bm{\lambda}^{(ww^{T})}\right]}+\epsilon$
+\end_inset
+
+, where 
+\begin_inset Formula $\epsilon$
+\end_inset
+
+ is any arbitrarily small positive number.
+ To be noticed that since the of 
+\begin_inset Formula $ww^{T}$
+\end_inset
+
+ is M, there are exactly 
+\begin_inset Formula $2M$
+\end_inset
+
+ non zero eigenvalues of 
+\begin_inset Formula $W$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+EP testing
+\end_layout
+
+\begin_layout Standard
+In this section we work out some analytical calculations, useful to determine
+ the accuracy of EP approximation for RBM-like architectures (when possible).
+ The alternative is to perform MCMC simulation over the full variable space
+ 
+\begin_inset Formula $\mathbf{x}=(\mathbf{v},\mathbf{h})$
+\end_inset
+
+, with the asymptotic distribution coinciding with the Boltzmann weight
+ 
+\begin_inset Formula $P(\mathbf{x})=\exp\left[-E(\mathbf{v},\mathbf{h})\right]/Z$
+\end_inset
+
+.
+ Apart from the single site potential which will vary from time to time,
+ we will always consider a Gaussian interaction between hidden and visible
+ variables, mediated by the weight matrix 
+\begin_inset Formula $W$
+\end_inset
+
+, made up of the blocks 
+\begin_inset Formula $w$
+\end_inset
+
+ and 
+\begin_inset Formula $w^{T}$
+\end_inset
+
+, so that the interaction term reads:
+\begin_inset Formula 
+\[
+E_{int}(\mathbf{v},\mathbf{h})=\sum_{i\mu}v_{i}w_{i\mu}h_{\mu}=\mathbf{v}^{T}W\mathbf{h}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Binary visible-Gaussian hidden
+\end_layout
+
+\begin_layout Standard
+Let's begin with the case in which the priors over the visible variables
+ identify them as being Bernoulli or binary.
+ At the same time we will keep the hidden units to be described by univariate
+ Gaussian priors.
+ Thus, the priors over the visible are identified as:
+\begin_inset Formula 
+\[
+\phi(v_{i})=\begin{cases}
+\frac{\mathrm{e}^{-v_{i}\theta_{B}}}{1+\mathrm{e}^{-\theta_{B}}} & v_{i}=0,1\\
+0 & \mathrm{otherwise}
+\end{cases}
+\]
+
+\end_inset
+
+ We can link the parameter 
+\begin_inset Formula $\theta_{B}$
+\end_inset
+
+ with the probability that a visible variable is either 0 or 1, namely if
+ we take 
+\begin_inset Formula $\rho$
+\end_inset
+
+ to be the weight for 
+\begin_inset Formula $v$
+\end_inset
+
+ to assume the value 0 we get: 
+\begin_inset Formula $\theta_{B}=\ln\left[\frac{\rho}{1-\rho}\right]$
+\end_inset
+
+.
+ For the sake of simplicity we took the Bernoulli exponent 
+\begin_inset Formula $\theta_{B}$
+\end_inset
+
+ to be independent on the index 
+\begin_inset Formula $i$
+\end_inset
+
+.
+ On the other hand the hidden priors are univariate Gaussians:
+\begin_inset Formula 
+\[
+\psi_{\nu}(h_{\nu})=\sqrt{\frac{\gamma_{\nu}}{2\pi}}\exp\left[-\gamma_{\nu}\frac{h_{\nu}^{2}}{2}+\theta_{\nu}h_{\nu}\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The idea is to combine the Gaussian priors together with the interaction
+ weights, an operation which can be performed analytically, and then compute
+ numerically the average values for the binary variables, feasible only
+ when the number of variable units is not too large (computation time 
+\begin_inset Formula $\sim2^{N}$
+\end_inset
+
+).
+ To begin with let's compute the partition function:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+Z & =\sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})\int\mathrm{d}^{M}h\prod_{\nu=1}^{M}\sqrt{\frac{\gamma_{\nu}}{2\pi}}\exp\left[-\gamma_{\nu}\frac{h_{\nu}^{2}}{2}+\theta_{\nu}h_{\nu}\right]\exp\left[-\sum_{i\mu}v_{i}w_{i\mu}h_{\mu}\right]\\
+= & \sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})\prod_{\nu=1}^{M}\exp\left\{ \frac{1}{2}\frac{\left[\theta_{\nu}-\sum_{i}w_{i\nu}v_{i}\right]^{2}}{\gamma_{\nu}}\right\} \\
+= & \sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})\prod_{\nu=1}^{M}\mathrm{e^{\frac{\theta_{\nu}^{2}}{2\gamma_{\nu}}}}\mathrm{e}^{-\frac{\theta_{\nu}}{\gamma_{\nu}}w_{j\nu}v_{j}}\mathrm{e}^{\frac{1}{2\gamma_{\nu}}\sum_{ij}w_{i\nu}w_{j\nu}v_{i}v_{j}}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Where we recognize the energy function of a fully connected Ising model
+ of couplings 
+\begin_inset Formula $J_{ij}=-\sum_{\nu}\frac{1}{\gamma_{\nu}}w_{i\nu}w_{j\nu}$
+\end_inset
+
+ and fields 
+\begin_inset Formula $h_{i}=\theta_{B}+\sum_{\nu}\frac{1}{\gamma_{\nu}}\left[w_{i\nu}\left(\theta_{\nu}-\frac{w_{i\nu}}{2}\right)\right]$
+\end_inset
+
+, up to irrelevant multiplicative constants.
+ In a similar fashion it is possible to compute first and second moments
+ of the visible variables:
+\begin_inset Formula 
+\begin{align*}
+\langle v_{k}\rangle & =\frac{1}{Z}\sum_{\mathbf{v}=\left\{ 0,1\right\} }v_{k}\prod_{j=1}^{N}\phi(v_{j})\prod_{\nu=1}^{M}\mathrm{e^{\frac{\theta_{\nu}^{2}}{2\gamma_{\nu}}}}\mathrm{e}^{-\frac{\theta_{\nu}}{\gamma_{\nu}}w_{j\nu}v_{j}}\mathrm{e}^{\frac{1}{\gamma_{\nu}}\sum_{ij}w_{i\nu}w_{j\nu}v_{i}v_{j}}\\
+= & \frac{1}{\tilde{Z}}\sum_{\mathbf{v}=\left\{ 0,1\right\} }v_{k}\exp\left[\sum_{i=1}^{N}h_{i}v_{i}+\sum_{i<j=1}^{N}J_{ij}v_{i}v_{j}\right]\\
+= & \langle\mathcal{S}(h_{k}+\sum_{j\neq k}J_{kj}v_{j})\rangle
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+with 
+\begin_inset Formula $\mathcal{S}(x)$
+\end_inset
+
+ the sigmoid logistic function.
+ Let's consider now the case of the cross correlation function 
+\begin_inset Formula $\langle v_{k}h_{\mu}\rangle$
+\end_inset
+
+, which is of interest in the computation of the likelihood gradient:
+\begin_inset Formula 
+\begin{align*}
+\langle v_{k}h_{\mu}\rangle & =\frac{1}{Z}\sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})v_{k}\int\mathrm{d}^{M}hh_{\mu}\prod_{\nu=1}^{M}\sqrt{\frac{\gamma_{\nu}}{2\pi}}\exp\left[-\gamma_{\nu}\frac{h_{\nu}^{2}}{2}+\theta_{\nu}h_{\nu}\right]\exp\left[-\sum_{i\nu}v_{i}w_{i\nu}h_{\nu}\right]\\
+= & \frac{1}{Z}\sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})v_{k}\left[\frac{\theta_{\mu}-\sum_{l}v_{l}w_{l\mu}}{\gamma_{\mu}}\right]\prod_{\nu=1}^{M}\exp\left\{ \frac{1}{2}\frac{\left[\theta_{\nu}-\sum_{i}w_{i\nu}v_{i}\right]^{2}}{\gamma_{\nu}}\right\} \\
+= & \frac{1}{\tilde{Z}}\sum_{\mathbf{v}=\left\{ 0,1\right\} }v_{k}\frac{\theta_{\mu}}{\gamma_{\mu}}\exp\left[\sum_{i=1}^{N}h_{i}v_{i}+\sum_{i<j=1}^{N}J_{ij}v_{i}v_{j}\right]-\frac{1}{\tilde{Z}}\sum_{l=1}^{N}\frac{w_{l\mu}}{\gamma_{\mu}}\sum_{\mathbf{v}=\left\{ 0,1\right\} }v_{k}v_{l}\exp\left[\sum_{i=1}^{N}h_{i}v_{i}+\sum_{i<j=1}^{N}J_{ij}v_{i}v_{j}\right]\\
+= & \frac{\theta_{\mu}}{\gamma_{\mu}}\langle v_{k}\rangle-\sum_{l=1}^{N}\frac{w_{l\mu}}{\gamma_{\mu}}\langle v_{k}v_{l}\rangle
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

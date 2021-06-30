@@ -32,8 +32,8 @@ struct UniformPrior <: Prior
     
 end
 
-function moments(p0::UniformPrior, μ, σ)
-    return μ,σ^2
+function moments(p0::UniformPrior, μ, σ2)
+    return μ,σ2
 end
 
 """

@@ -218,13 +218,28 @@ GaussianEP.EPOut{Float64}([0.499997, 0.499997, 3.66527e-15], [0.083325, 0.083325
 function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P}, F::AbstractMatrix{T} = zeros(T,0,length(P0)), d::AbstractVector{T} = zeros(T,size(F,1));
                      maxiter::Int = 2000,
                      callback = (x...)->nothing,
-                     state::EPState{T} = EPState{T}(sum(size(F)), size(F)[2]),
+                     state::Union{EPState{T},Nothing} = nothing,
                      damp::T = T(0.9),
                      epsconv::T = T(1e-6),
                      maxvar::T = T(1e50),
                      minvar::T = T(-1e50),
                      inverter::Symbol = :block_inv) where {T <: Real, P <: Prior}
+
+                     
+    flag = 0
+    c = if state === nothing
+        state = EPState{T}(sum(size(F)), size(F)[2])
+        flag = 1
+        min_diagel(H[1].w) 
+    end
+
     @extract state A y Σ v av va a μ b s
+
+    if flag == 1
+        b .= 1/c
+    end
+    
+     
     Ny,Nx = size(F)
     N = Nx + Ny
     @assert size(P0,1) == N
@@ -232,8 +247,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
     Nv, Nh = size(H[1].w)
     @assert Nv+Nh == Nx
 
-    c = min_diagel(H[1].w)
-    b .= 1/c
+    
 
     for iter = 1:maxiter
         sum!(A,y,H)
@@ -263,7 +277,8 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
             Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
             Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
 
-            println("$s\n")
+            #println("$(s[i])\n")
+            println("$(b[i]) $ss $(b[i]-ss) $(s[i])\n")
 
             # if ss < b[i]
             #     Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))

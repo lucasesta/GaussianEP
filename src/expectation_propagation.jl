@@ -112,7 +112,7 @@ function expectation_propagation(H::AbstractVector{Term{T}}, P0::AbstractVector{
     for iter = 1:maxiter
         sum!(A,y,H)
         Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0
-        A .+= Diagonal(1 ./ b[1:Nx]) .+ Fp * Diagonal(1 ./ b[Nx+1:end]) * F
+        A .+= Diagonal(1 ./ b[1:Nx]) .+ Fp * (Diagonal(1 ./ b[Nx+1:end]) * F)
         Σ .= inverter(A)
         ax, bx, ay, by = (@view a[1:Nx]), (@view b[1:Nx]), (@view a[Nx+1:end]), (@view b[Nx+1:end])
         v .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
@@ -121,9 +121,8 @@ function expectation_propagation(H::AbstractVector{Term{T}}, P0::AbstractVector{
                 ss = clamp(Σ[i,i], minvar, maxvar)
                 vv = v[i]
             else
-                x = @view Fp[:, i-Nx]
-                ss = clamp(dot(x, Σ*x), minvar, maxvar)
-                vv = dot(x, v) + d[i-Nx]
+                ss = clamp(dot(F[i-Nx,:], Σ*Fp[:,i-Nx]), minvar, maxvar)
+                vv = dot(Fp[:,i-Nx], v) + d[i-Nx]
             end
 
             if ss < b[i]

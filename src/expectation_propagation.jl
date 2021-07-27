@@ -278,7 +278,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
             Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
 
             #println("$(s[i])\n")
-            println("$(b[i]) $ss $(b[i]-ss) $(s[i])\n")
+            #println("$(b[i]) $ss $(b[i]-ss) $(s[i])\n")
 
             # if ss < b[i]
             #     Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))

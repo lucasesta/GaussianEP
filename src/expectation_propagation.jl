@@ -222,6 +222,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                      epsconv::T = T(1e-6),
                      maxvar::T = T(1e50),
                      minvar::T = T(-1e50),
+                     nprint::Int = 100,
                      inverter::Symbol = :block_inv) where {T <: Real, P <: Prior}
 
                      
@@ -251,7 +252,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
     for iter = 1:maxiter
         sum!(A,y,H)
         Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0
-        B, C = Diagonal(1 ./b[1:Nv]), Diagonal(1 ./ b[Nv+1:Nx])
+        _, C = Diagonal(1 ./b[1:Nv]), Diagonal(1 ./ b[Nv+1:Nx])
         Bm1 = Diagonal(b[1:Nv])
         if inverter == :block_inv
             Σ .= block_inv(A[1:Nv,Nv+1:Nx],Bm1,C)
@@ -308,7 +309,11 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         #     updateβ(H[i], av[1:Nx])
         # end
         ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H,P0)
+        if mod(iter, nprint) == 0
+            println("it: ", iter, " Δav: ", Δav)
+        end
         if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4)
+            println("it: ", iter, " Δav: ", Δav)
             return EPOut(state, :converged)
         end
     end

@@ -9,7 +9,6 @@ include("Term.jl")
 include("priors.jl")
 include("expectation_propagation.jl")
 include("ProgressReporter.jl")
-include("../MC/MC_rbm.jl")
 include("Analytics.jl")
 
 end # end module

@@ -1925,7 +1925,7 @@ with
 \begin_inset Formula 
 \begin{align*}
 \langle v_{k}h_{\mu}\rangle & =\frac{1}{Z}\sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})v_{k}\int\mathrm{d}^{M}hh_{\mu}\prod_{\nu=1}^{M}\sqrt{\frac{\gamma_{\nu}}{2\pi}}\exp\left[-\gamma_{\nu}\frac{h_{\nu}^{2}}{2}+\theta_{\nu}h_{\nu}\right]\exp\left[-\sum_{i\nu}v_{i}w_{i\nu}h_{\nu}\right]\\
-= & \frac{1}{Z}\sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})v_{k}\left[\frac{\theta_{\mu}-\sum_{l}v_{l}w_{l\mu}}{\gamma_{\mu}}\right]\prod_{\nu=1}^{M}\exp\left\{ \frac{1}{2}\frac{\left[\theta_{\nu}-\sum_{i}w_{i\nu}v_{i}\right]^{2}}{\gamma_{\nu}}\right\} \\
+= & \frac{1}{Z}\sum_{\mathbf{v}=\left\{ 0,1\right\} }\prod_{j=1}^{N}\phi(v_{j})v_{k}\left[\frac{\theta_{\mu}-\sum_{l}v_{l}w_{l\mu}}{\gamma_{\mu}}\right]\prod_{\nu=1}^{M}\exp\left\{ \frac{1}{2}\frac{\left[\theta_{\nu}-\sum_{i}w_{i\nu}v_{i}\right]^{2}}{\gamma_{\nu}^{}}\right\} \\
 = & \frac{1}{\tilde{Z}}\sum_{\mathbf{v}=\left\{ 0,1\right\} }v_{k}\frac{\theta_{\mu}}{\gamma_{\mu}}\exp\left[\sum_{i=1}^{N}h_{i}v_{i}+\sum_{i<j=1}^{N}J_{ij}v_{i}v_{j}\right]-\frac{1}{\tilde{Z}}\sum_{l=1}^{N}\frac{w_{l\mu}}{\gamma_{\mu}}\sum_{\mathbf{v}=\left\{ 0,1\right\} }v_{k}v_{l}\exp\left[\sum_{i=1}^{N}h_{i}v_{i}+\sum_{i<j=1}^{N}J_{ij}v_{i}v_{j}\right]\\
 = & \frac{\theta_{\mu}}{\gamma_{\mu}}\langle v_{k}\rangle-\sum_{l=1}^{N}\frac{w_{l\mu}}{\gamma_{\mu}}\langle v_{k}v_{l}\rangle
 \end{align*}

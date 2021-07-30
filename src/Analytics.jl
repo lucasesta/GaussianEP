@@ -5,10 +5,66 @@
 
 """
 
+# Gaussian-Gaussian priors
+# Computation of the exact covariance matrix
+
+function compute_analytic(w::Matrix{T}, Pv::Vector{GaussianPrior{T}}, Ph::Vector{GaussianPrior{T}}) where {T<:Real}
+
+    N, M = size(w)
+    W = zeros(N+M, N+M)
+    W[1:N,N+1:N+M] .= w
+    W[N+1:N+M,1:N] .= w'
+    W[1:N, 1:N] .= I(N)
+    W[N+1:N+M,N+1:N+M] .= I(M)
+
+    for i = 1:N
+        W[i,i] = Pv[i].β 
+    end
+    for i = 1:M
+        W[N+i,N+i] = Ph[i].β
+    end
+
+    return inv(W)
+
+end
+
 
 # Binary visible-Gaussian hidden: Bernoulli visible variables
 # defined by parameter θ_B ϕ(v)=exp[-θ_B]/(1+exp[-θ_B]).
 # Gaussian hidden units of distribution ψ(h)∝exp[-γ*h^2/2+θ*h] 
+
+# Function computing all observables 
+
+function compute_analytic(w::Matrix, Pv::Vector{BinaryPrior{T}}, Ph::Vector{GaussianPrior{T}}) where {T<:Real}
+
+    N, M = size(w)
+    @assert N <= 20
+    h, J = CoupField(w,Pv,Ph)
+    
+    av_v = zeros(N)
+    av_h = zeros(M)
+    av_vv = zeros(N)
+    av_hh = zeros(M)
+    for i=1:N
+        av_v[i] = average_v(h, J, i)
+        av_vv[i] = average_vv(h, J, i, i)
+    end
+    
+    for j=1:M
+        av_h[j] = average_h(h, J, Ph[j], w, j)
+        av_hh[j] = average_h2(h, J, Ph[j], w, j)
+    end
+
+    cov_vh = zeros(N,M)
+    for i = 1:N
+        for j = 1:M
+            cov_vh[i,j] = average_vh(w, Pv, Ph, i,j)
+        end
+    end
+
+    return vcat(av_v, av_h), vcat(av_vv - av_v.^2, av_hh - av_h.^2), cov_vh
+    
+end
 
 
 #Function defining fields and coupling from 
@@ -116,19 +172,20 @@ end
 function average_vh(w::Matrix{T}, Pv::Vector{BinaryPrior{T}}, Ph::Vector{GaussianPrior{T}}, idx_v::Int64, idx_m::Int64) where {T<:Real}
 
     N = length(Pv)
-    xc = 0.0
 
-    θ = Ph[idx_m].μ
+    θ = Ph[idx_m].μ * Ph[idx_m].β
     γ = Ph[idx_m].β
 
     h, J = CoupField(w,Pv,Ph)
 
     av_v = average_v(h,J,idx_v)
 
-    xc += av_v*(θ-w[idx_v,idx_m])
-
-    for i in setdiff(1:N,idx_v)
-        xc += w[i,idx_m]*average_vv(h,J,idx_v,i)
+    #xc += av_v*(θ-w[idx_v,idx_m])
+    xc = av_v * θ
+    #for i in setdiff(1:N,idx_v)
+    for i in 1:N
+        #xc += w[i,idx_m]*average_vv(h,J,idx_v,i)
+        xc += -w[i,idx_m]*average_vv(h,J,idx_v,i)
     end
     
     xc /= γ

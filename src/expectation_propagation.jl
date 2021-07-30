@@ -257,7 +257,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         if inverter == :block_inv
             Σ .= block_inv(A[1:Nv,Nv+1:Nx],Bm1,C)
         else
-            A .+= Diagonal(1 ./ b[1:Nx]) .+ Fp * Diagonal(1 ./ b[Nx+1:end]) * F
+            A .+= Diagonal(1 ./ b[1:Nx]) .+ Fp * (Diagonal(1 ./ b[Nx+1:end]) * F)
             Σ = inv(Symmetric(A))
             @assert isposdef(Σ)
         end
@@ -269,9 +269,8 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                 ss = clamp(Σ[i,i], minvar, maxvar)
                 vv = v[i]
             else
-                x = @view Fp[:, i-Nx]
-                ss = clamp(dot(x, Σ*x), minvar, maxvar)
-                vv = dot(x, v) + d[i-Nx]
+                ss = clamp(dot(F[i-Nx,:], Σ*Fp[:,i-Nx]), minvar, maxvar)
+                vv = dot(Fp[:,i-Nx], v) + d[i-Nx]
             end
 
             Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
@@ -313,7 +312,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
             println("it: ", iter, " Δav: ", Δav)
         end
         if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4)
-            println("it: ", iter, " Δav: ", Δav)
+            #println("it: ", iter, " Δav: ", Δav)
             return EPOut(state, :converged)
         end
     end

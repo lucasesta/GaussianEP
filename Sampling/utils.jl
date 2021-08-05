@@ -149,7 +149,7 @@ end
 
 """
 
-function Autocorrelation(data::Array{Float64,1})
+function Autocorrelation(x::Array{Float64,1}; est_err::Simbol=:false)
 
     m = 0.0
     sig = 0.0
@@ -157,9 +157,7 @@ function Autocorrelation(data::Array{Float64,1})
     k = 0
     Sl = 0.0
 
-    x = copy(data)
-
-    N = length(data)
+    N = length(x)
     C = fill(1.0,N)
 
     #io = open("/Users/luca/Desktop/MC/Autocorr_$var.txt","w")
@@ -174,26 +172,24 @@ function Autocorrelation(data::Array{Float64,1})
 
     m /= N
 
-    while k < 5.0*(0.5+Sl/C[1])
-        for i=1:N-k
-			C[k+1] += (x[i+k] - m)*(x[i] - m);
-		end
-        C[k+1] /= (N-k)
-        if k!=0
-            Sl += C[k+1]
+
+    if est_err 
+        while k < min(N-1, 5.0*(0.5+Sl/C[1]))
+            for i=1:N-k
+                C[k+1] += (x[i+k] - m)*(x[i] - m);
+		    end
+            C[k+1] /= (N-k)
+            if k!=0
+                Sl += C[k+1]
+            end
+            #writedlm(io,hcat(k,C[k+1],Sl))
+            k+=1
         end
-
-        #writedlm(io,hcat(k,C[k+1],Sl))
-
-        k+=1
-
+        #close(io)
+        tau = 0.5 + Sl/C[1]
+        sig = sqrt(C[1]*2*tau/N)
     end
 
-    #close(io)
-
-    tau = 0.5 + Sl/C[1]
-
-    sig = sqrt(C[1]*2*tau/N)
 
     return m, sig, tau
 

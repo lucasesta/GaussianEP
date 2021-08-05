@@ -204,8 +204,8 @@ function compute_statistics(mc_out::MCout)
     va_mc = zeros(N+M,)
     cov_mc = zeros(N,M)
     for i = 1:N
-        av_mc[i], _, _ = Sampling.Autocorrelation(mc_out.samples[:,i])
         va_mc[i], _, _ = Sampling.Autocorrelation(mc_out.samples2[:,i])
+        av_mc[i], _, _ = Sampling.Autocorrelation(mc_out.samples[:,i])
         for j = 1:M
             cov_mc[i,j], _, _ = Sampling.Autocorrelation(mc_out.vh[:,i,j])
         end

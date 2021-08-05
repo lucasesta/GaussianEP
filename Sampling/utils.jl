@@ -149,7 +149,7 @@ end
 
 """
 
-function Autocorrelation(x::Array{Float64,1}; est_err::Simbol=:false)
+function Autocorrelation(x::Array{Float64,1}; est_err::Symbol=:false)
 
     m = 0.0
     sig = 0.0

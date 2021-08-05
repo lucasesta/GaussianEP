@@ -102,7 +102,7 @@ function Pot(P::BinaryPrior,x)
 
     θ_B = log(P.ρ/(1-P.ρ))
 
-    f(y) = y==0 || y==1 ? x*θ_B : typemax(y)
+    f(y) = y==0 || y==1 ? y*θ_B : typemax(y)
     
     u_pot = f(x)
 
@@ -149,7 +149,8 @@ end
 
 """
 
-function Autocorrelation(x::Array{Float64,1}; est_err::Symbol=:false)
+function Autocorrelation(x::Array{Float64,1}; 
+                         est_err::Bool=false)
 
     m = 0.0
     sig = 0.0
@@ -173,7 +174,7 @@ function Autocorrelation(x::Array{Float64,1}; est_err::Symbol=:false)
     m /= N
 
 
-    if est_err 
+    if est_err
         while k < min(N-1, 5.0*(0.5+Sl/C[1]))
             for i=1:N-k
                 C[k+1] += (x[i+k] - m)*(x[i] - m);

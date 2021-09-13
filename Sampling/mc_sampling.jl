@@ -46,7 +46,7 @@ function MC_sim_av(w::Matrix{Float64},P::Array{T,1}, N_iter::Int64, Δ::Float64;
             E += Pot(P[k],x[k])
             if k <= N
                 for μ=1:M
-                    E += w[k,μ]*x[k]*x[N+μ]
+                    E -= w[k,μ]*x[k]*x[N+μ]
                 end
             end
         end
@@ -179,7 +179,7 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
             E[iter] += Pot(P[k],x[k])
             if k <= N
                 for μ=1:M
-                    E[iter] += w[k,μ]*x[k]*x[N+μ]
+                    E[iter] -= w[k,μ]*x[k]*x[N+μ]
                     vh[iter, k, μ ] = x[k]*x[N+μ]
                 end
             end

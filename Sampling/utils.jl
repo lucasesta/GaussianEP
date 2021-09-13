@@ -55,7 +55,7 @@ function EnerVar(y::Array{Float64,1},w::Array{Float64,1},P::Prior, x::Float64, x
     N_c = length(y)
     
     for k=1:N_c
-        ΔE += w[k]*y[k]
+        ΔE -= w[k]*y[k]
     end
 
     ΔE *= (x-x_old)

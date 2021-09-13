@@ -4,7 +4,7 @@
 
 """
 
-    E(v,h) = ∑_iμ v_i * w_iμ *h_μ + ∑_μ U_μ(h_μ) + ∑_i V_i(v_i)
+    E(v,h) = -∑_iμ v_i * w_iμ *h_μ + ∑_μ U_μ(h_μ) + ∑_i V_i(v_i)
     P(v,h) ∝ exp[-E(v,h)]
 
 """

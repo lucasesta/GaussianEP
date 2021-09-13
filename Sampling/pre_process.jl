@@ -34,7 +34,7 @@ function MC_Δ_scan(Δ_vec::Array{R,1}, w::Matrix{R},P::Array{T,1}, N_iter::Int6
                 if l <= N
                     x[l], a = Accept(x[N+1:N+M],w[l,:],P[l],x[l],x_old)
                 else
-                    x[l], a =Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
+                    x[l], a = Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
                 end
     
                 a_cum += a
@@ -88,7 +88,7 @@ function MC_t_therm(block_num::Int64, w::Matrix{R},P::Array{T,1}, Δ::R;
             if l <= N
                 x[l], a = Accept(x[N+1:N+M],w[l,:],P[l],x[l],x_old)
             else
-                x[l], a =Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
+                x[l], a = Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
             end
         end
 
@@ -96,7 +96,7 @@ function MC_t_therm(block_num::Int64, w::Matrix{R},P::Array{T,1}, Δ::R;
             E[iter] += Pot(P[k],x[k])
             if k <= N
                 for μ=1:M
-                    E[iter] += w[k,μ]*x[k]*x[N+μ]
+                    E[iter] -= w[k,μ]*x[k]*x[N+μ]
                 end
             end
         end

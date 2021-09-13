@@ -13,11 +13,24 @@ function Move(x::Float64, Δ::Float64)
 end
 
 function MoveBin(x::Float64)
+   
     if x == 0
         return 1
     else
         return 0
     end
+end
+
+function MoveSpAndSlab(x::Float64, Δ::Float64, ρ::Float64)
+
+    r = rand()
+    if r < 1.0-ρ
+        x = 0.0
+    else
+        x += 2.0*Δ*(rand()-0.5)
+    end
+
+    return x
 end
 
 """
@@ -32,6 +45,7 @@ function Accept(y::Array{Float64,1},w::Array{Float64,1},P::Prior, x::Float64, x_
     ΔE = EnerVar(y,w,P,x,x_old)
     r = rand()
     a = exp(-ΔE)
+
 
     if r<1 && r > a
         x = x_old
@@ -60,7 +74,9 @@ function EnerVar(y::Array{Float64,1},w::Array{Float64,1},P::Prior, x::Float64, x
 
     ΔE *= (x-x_old)
     ΔE += Pot(P,x)-Pot(P,x_old)
-
+    #println(P, " ", x, " ", Pot(P,x))
+    #println(P, " ", x_old, " ", Pot(P,x_old))
+    
     return ΔE
 
 end
@@ -110,6 +126,18 @@ function Pot(P::BinaryPrior,x)
 
 end
 
+function Pot(P::SpikeSlabPrior,x)
+
+    if x == 0.0
+        #u_pot = -log(1.0- P.ρ + P.ρ * exp(-0.5*P.λ*x*x)/sqrt(2*π*(1.0/P.λ)))
+        u_pot = -log(1.0 - P.ρ)
+    else
+        u_pot = -log(P.ρ) + 0.5*P.λ*x*x + 0.5*log(2 * π * (1.0/P.λ)) 
+    end
+
+    return u_pot
+
+end
 
 """
 

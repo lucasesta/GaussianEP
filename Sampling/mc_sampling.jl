@@ -104,12 +104,6 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
     vh = zeros(Float64,N*M)
     a = 0.0
 
-    #io = open("/Users/luca/Desktop/MC/MC_path.txt","w")
-    #write(io,"#mc_step\ta\tv\th\tv2\th2\tvh\tE\n")
-    #close(io)
-
-    #io = open("/Users/luca/Desktop/MC/MC_path.txt","a")
-
     iter = 1
     while iter < t_wait
         a_cum = 0.0
@@ -119,6 +113,8 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
 
             if typeof(P[l]) == BinaryPrior{R}
                 x[l] = MoveBin(x_old)
+            elseif typeof(P[l]) == SpikeSlabPrior{R}
+                x[l] = MoveSpAndSlab(x_old, Δ, P[l].ρ)
             else
                 x[l] = Move(x_old,Δ)
             end
@@ -126,7 +122,7 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
             if l <= N
                 x[l], a = Accept(x[N+1:N+M],w[l,:],P[l],x[l],x_old)
             else
-                x[l], a =Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
+                x[l], a = Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
             end
 
             if k>N && P[k]==ReLUPrior{R} && x[k]<0
@@ -154,6 +150,8 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
 
             if typeof(P[l]) == BinaryPrior{R}
                 x[l] = MoveBin(x_old)
+            elseif typeof(P[l]) == SpikeSlabPrior{R}
+                x[l] = MoveSpAndSlab(x_old, Δ, P[l].ρ)
             else
                 x[l] = Move(x_old,Δ)
             end

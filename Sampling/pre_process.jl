@@ -24,6 +24,8 @@ function MC_Δ_scan(Δ_vec::Array{R,1}, w::Matrix{R},P::Array{T,1}, N_iter::Int6
 
                 if typeof(P[l]) == BinaryPrior{R}
                     x[l] = MoveBin(x_old)
+                elseif typeof(P[l]) == SpikeSlabPrior{R}
+                    x[l] = MoveSpAndSlab(x_old,Δ,P[l].ρ)
                 else
                     x[l] = Move(x_old,Δ)
                 end
@@ -76,6 +78,8 @@ function MC_t_therm(block_num::Int64, w::Matrix{R},P::Array{T,1}, Δ::R;
 
             if typeof(P[l]) == BinaryPrior{R}
                 x[l] = MoveBin(x_old)
+            elseif typeof(P[l]) == SpikeSlabPrior{R}
+                x[l] = MoveSpAndSlab(x_old,Δ,P[l].ρ)
             else
                 x[l] = Move(x_old,Δ)
             end

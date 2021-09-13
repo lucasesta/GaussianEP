@@ -1,3 +1,5 @@
+#DA CAMBIARE
+
 """
 
     In this file we define some functions to numerically compute the moments
@@ -92,7 +94,7 @@ function CoupField(w::Matrix{T}, Pv::Vector{BinaryPrior{T}}, Ph::Vector{Gaussian
     for i=1:N
         h[i] -= θ_B
         for m=1:M
-            h[i] -= w[i,m]*(θ[m]-0.5*w[i,m])/γ[m]
+            h[i] += w[i,m]*(θ[m]+0.5*w[i,m])/γ[m]
         end
     end
 
@@ -185,7 +187,7 @@ function average_vh(w::Matrix{T}, Pv::Vector{BinaryPrior{T}}, Ph::Vector{Gaussia
     #for i in setdiff(1:N,idx_v)
     for i in 1:N
         #xc += w[i,idx_m]*average_vv(h,J,idx_v,i)
-        xc += -w[i,idx_m]*average_vv(h,J,idx_v,i)
+        xc += w[i,idx_m]*average_vv(h,J,idx_v,i)
     end
     
     xc /= γ
@@ -238,7 +240,7 @@ function average_h(h::Vector{T}, J::Matrix{T}, Ph::GaussianPrior{T}, w::Matrix{T
     av_h += θ
 
     for i=1:N
-        av_h -= w[i,idx]*average_v(h,J,i)
+        av_h += w[i,idx]*average_v(h,J,i)
     end
 
     av_h /= γ
@@ -257,7 +259,7 @@ function average_h2(h::Vector{T}, J::Matrix{T}, Ph::GaussianPrior,w::Matrix{T},i
     av_h2 += θ^2
 
     for i=1:N
-        av_h2 -= 2 * θ * w[i,idx]*average_v(h,J,i)
+        av_h2 += 2 * θ * w[i,idx]*average_v(h,J,i)
         for j=1:N
             av_h2 += w[i,idx]*w[j,idx]*average_vv(h,J,i,j)
         end

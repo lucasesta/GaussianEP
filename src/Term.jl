@@ -55,7 +55,7 @@ function sum!(A::Matrix{T}, y::Vector{T}, H::Vector{TermRBM{T}}) where T <: Real
     for i=1:length(H)
         W[1:size(H[i].w,1),size(H[i].w,1)+1:end] = H[i].w
         W[size(H[i].w,1)+1:end,1:size(H[i].w,1)] = H[i].w'
-        A .+= H[i].β * W
+        A .-= H[i].β * W
         y .+= H[i].β * H[i].y
     end
 end

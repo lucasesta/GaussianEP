@@ -14,8 +14,8 @@ function compute_analytic(w::Matrix{T}, Pv::Vector{GaussianPrior{T}}, Ph::Vector
 
     N, M = size(w)
     W = zeros(N+M, N+M)
-    W[1:N,N+1:N+M] .= w
-    W[N+1:N+M,1:N] .= w'
+    W[1:N,N+1:N+M] .= -w
+    W[N+1:N+M,1:N] .= -w'
     W[1:N, 1:N] .= I(N)
     W[N+1:N+M,N+1:N+M] .= I(M)
 

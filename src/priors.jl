@@ -158,6 +158,7 @@ struct BinaryPrior{T<:Real} <: Prior
     x0::T
     x1::T
     ρ::T
+    δρ::T
 end
 
 
@@ -178,6 +179,27 @@ function moments(p0::BinaryPrior, μ, σ2)
     return av,va
 end
 
+
+function gradient(p0::BinaryPrior, μ, σ2)
+
+    arg = -1/(2*σ2) * ( p0.x0^2 - p0.x1^2 + 2 * μ * (p0.x1 - p0.x0) )
+    earg = exp(arg)
+    Z = p0.ρ * earg + (1-p0.ρ)
+
+    if (isnan(Z) || isinf(Z))
+        Z = p0.ρ + (1-p0.ρ) / earg;
+        if p0.δρ > 0
+            p0.ρ += p0.δρ * (1 - 1 / earg) / Z;
+            p0.ρ = clamp(p0.ρ, 0, 1)
+        end
+    elseif p0.δρ > 0
+        p0.ρ += p0.δρ * (earg - 1) / Z;
+        p0.ρ = clamp(p0.ρ, 0, 1)
+    end
+
+end
+
+#Gaussian prior
 
 struct GaussianPrior{T<:Real} <: Prior
     μ::T
@@ -358,6 +380,8 @@ end
 struct ReLUPrior{T<:Real} <: Prior
     γ::T
     θ::T
+    δγ::T
+    δθ::T
 end
 
 function moments(p0::ReLUPrior,μ,σ2)
@@ -377,6 +401,32 @@ function moments(p0::ReLUPrior,μ,σ2)
     return av, va
 
 end
+
+function gradient(p0::ReLUPrior,μ,σ2)
+
+    m = (μ+p0.θ*σ2)/(1+p0.γ*σ2)
+    s = σ2/(1+p0.γ*σ2)
+
+    if s <0
+        throw(DomainError("Combined variance must be positive"))
+    end
+
+    α = m/sqrt(s)
+
+    g_γ = -0.5* s * ( s + pdf_cf(α) * α/sqrt(2) )
+    g_θ = pdf_cf(α) * sqrt(s/2)
+
+    #update
+    if p0.δγ > 0
+        p0.γ += p0.δγ * g_γ
+    end
+
+    if p0.δθ > 0
+        p0.θ += p0.δθ * g_θ    
+    end
+
+end
+
 
 """
 

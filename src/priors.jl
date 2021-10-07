@@ -154,7 +154,7 @@ Binary Prior
 p_0(x) ∝ ρ δ(x-x_0) + (1-ρ) δ(x-x_1)
 
 """
-struct BinaryPrior{T<:Real} <: Prior
+mutable struct BinaryPrior{T<:Real} <: Prior
     x0::T
     x1::T
     ρ::T
@@ -187,6 +187,7 @@ function gradient(p0::BinaryPrior, μ, σ2)
     Z = p0.ρ * earg + (1-p0.ρ)
 
     if (isnan(Z) || isinf(Z))
+        println("Infinite Z\n")
         Z = p0.ρ + (1-p0.ρ) / earg;
         if p0.δρ > 0
             p0.ρ += p0.δρ * (1 - 1 / earg) / Z;
@@ -377,7 +378,7 @@ end
 
 """
 
-struct ReLUPrior{T<:Real} <: Prior
+mutable struct ReLUPrior{T<:Real} <: Prior
     γ::T
     θ::T
     δγ::T
@@ -413,7 +414,7 @@ function gradient(p0::ReLUPrior,μ,σ2)
 
     α = m/sqrt(s)
 
-    g_γ = -0.5* s * ( s + pdf_cf(α) * α/sqrt(2) )
+    g_γ = -0.5* s * ( 1 + pdf_cf(α) * α/sqrt(2) )
     g_θ = pdf_cf(α) * sqrt(s/2)
 
     #update

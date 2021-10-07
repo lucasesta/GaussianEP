@@ -196,23 +196,6 @@ Optional named arguments:
 * `minvar::T = 1e-50`: minimum variance
 * `inverter = block_inv`: inverter method
 
-# Example
-
-```jldoctest
-julia> t=Term(zeros(2,2),zeros(2),1.0)
-Term{Float64}([0.0 0.0; 0.0 0.0], [0.0, 0.0], 0.0, 1.0, 0.0, 0)
-
-julia> P=[IntervalPrior(i...) for i in [(0,1),(0,1),(-2,2)]]
-3-element Array{IntervalPrior{Int64},1}:
- IntervalPrior{Int64}(0, 1)
- IntervalPrior{Int64}(0, 1)
- IntervalPrior{Int64}(-2, 2)
-
-julia> F=[1.0 -1.0];
-
-julia> res = expectation_propagation([t], P, F)
-GaussianEP.EPOut{Float64}([0.499997, 0.499997, 3.66527e-15], [0.083325, 0.083325, 0.204301], [0.489862, 0.489862, 3.66599e-15], [334.018, 334.018, 0.204341], :converged, EPState{Float64}([9.79055 -0.00299477; -0.00299477 9.79055], [0.0, 0.0], [0.102139 3.12427e-5; 3.12427e-5 0.102139], [0.489862, 0.489862], [0.499997, 0.499997, 3.66527e-15], [0.083325, 0.083325, 0.204301], [0.490876, 0.490876, -1.86785e-17], [0.489862, 0.489862, 3.66599e-15], [0.100288, 0.100288, 403.599], [334.018, 334.018, 0.204341]))
-```
 """
 function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P}, F::AbstractMatrix{T} = zeros(T,0,length(P0)), d::AbstractVector{T} = zeros(T,size(F,1));
                      maxiter::Int = 2000,
@@ -300,9 +283,9 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         end
 
         # learn prior's params
-        # for i in randperm(N)
-        #     gradient(P0[i], μ[i], sqrt(s[i]));
-        # end
+         for i in randperm(N)
+             gradient(P0[i], μ[i], s[i]);
+         end
         # learn β params
         # for i in 1:length(H)
         #     updateβ(H[i], av[1:Nx])

@@ -34,7 +34,7 @@ function MC_Δ_scan(Δ_vec::Array{R,1}, w::Matrix{R},P::Array{T,1}, N_iter::Int6
                 if l <= N
                     x[l], a = Accept(x[N+1:N+M],w[l,:],P[l],x[l],x_old)
                 else
-                    x[l], a = Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
+                    x[l], a = Accept(x[1:N], w[:,l-N],P[l],x[l],x_old)
                 end
     
                 a_cum += a
@@ -84,11 +84,10 @@ function MC_t_therm(block_num::Int64, w::Matrix{R},P::Array{T,1}, Δ::R;
                 x[l] = Move(x_old,Δ)
             end
 
-            #x[l] = Move(x_old,Δ)
             if l <= N
-                x[l], a = Accept(x[N+1:N+M],w[l,:],P[l],x[l],x_old)
+                x[l], a = Accept(x[N+1:N+M], w[l,:],P[l],x[l],x_old)
             else
-                x[l], a = Accept(x[1:N],w[:,l-N],P[l],x[l],x_old)
+                x[l], a = Accept(x[1:N], w[:,l-N],P[l],x[l],x_old)
             end
         end
 
@@ -101,18 +100,9 @@ function MC_t_therm(block_num::Int64, w::Matrix{R},P::Array{T,1}, Δ::R;
             end
         end
 
-        #writedlm(io,hcat(iter,E))
 
     end
 
-    # for k=1:block_num+1
-    #     bl_tab[k,3] -= bl_tab[k,2]^2
-    #     bl_tab[k,3] = sqrt(bl_tab[k,3]/bl_size[k])
-    # end
-
-    #return bl_tab
-
-    #close(io)
 
     return E
 
@@ -125,7 +115,6 @@ end
     energy and uncertainty via JK.
 
 """
-
 function block_anal(block_num::Int64, e_data::Vector)
 
     #e_data = readdlm(file_name; comments = true)
@@ -138,7 +127,7 @@ function block_anal(block_num::Int64, e_data::Vector)
 
     bl_lim = zeros(Int64,block_num+1)
     bl_lim[2:end] .= [N_iter÷(2^(block_num-b)) for b in 1:1:block_num]
-    bl_size = bl_lim[2:end].-bl_lim[1:end-1]
+    bl_size = bl_lim[2:end].- bl_lim[1:end-1]
 
     bl_tab[:,1] .= bl_size
 

@@ -73,6 +73,7 @@ function EnerVar(y::Array{Float64,1},w::Array{Float64,1},P::Prior, x::Float64, x
     end
 
     ΔE *= (x-x_old)
+    #println("weights-dep energy ", ΔE)
     ΔE += Pot(P,x)-Pot(P,x_old)
     #println(P, " ", x, " ", Pot(P,x))
     #println(P, " ", x_old, " ", Pot(P,x_old))
@@ -129,7 +130,6 @@ end
 function Pot(P::SpikeSlabPrior,x)
 
     if x == 0.0
-        #u_pot = -log(1.0- P.ρ + P.ρ * exp(-0.5*P.λ*x*x)/sqrt(2*π*(1.0/P.λ)))
         u_pot = -log(1.0 - P.ρ)
     else
         u_pot = -log(P.ρ) + 0.5*P.λ*x*x + 0.5*log(2 * π * (1.0/P.λ)) 
@@ -177,7 +177,7 @@ end
 
 """
 
-function Autocorrelation(x::Array{Float64,1}; 
+function Autocorrelation(x::Array{Float64,1}, C::Vector{Float64};
                          est_err::Bool=false)
 
     m = 0.0
@@ -187,13 +187,8 @@ function Autocorrelation(x::Array{Float64,1};
     Sl = 0.0
 
     N = length(x)
-    C = fill(1.0,N)
+    C = fill!(C, 1.0)
 
-    #io = open("/Users/luca/Desktop/MC/Autocorr_$var.txt","w")
-    #write(io,"#k\tC\tSl\n")
-    #close(io)
-
-    #io = open("/Users/luca/Desktop/MC/Autocorr_$var.txt","a")
 
     for i=1:N
         m += x[i]

@@ -13,7 +13,7 @@
 module Sampling
 using Statistics
 
-include("../src/priors.jl")
+include("priors.jl")
 include("mc_sampling.jl")
 include("pre_process.jl")
 include("utils.jl")

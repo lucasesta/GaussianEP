@@ -197,7 +197,9 @@ Optional named arguments:
 * `inverter = block_inv`: inverter method
 
 """
-function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P}, F::AbstractMatrix{T} = zeros(T,0,length(P0)), d::AbstractVector{T} = zeros(T,size(F,1));
+function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVector{P},Ph::AbstractVector{P}; 
+                     F::AbstractMatrix{T} = zeros(T,0,length(Pv)+length(Ph)),
+                     d::AbstractVector{T} = zeros(T,size(F,1)),
                      maxiter::Int = 2000,
                      callback = (x...)->nothing,
                      state::Union{EPState{T},Nothing} = nothing,
@@ -206,9 +208,9 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                      maxvar::T = T(1e50),
                      minvar::T = T(-1e50),
                      nprint::Int = 100,
-                     inverter::Symbol = :block_inv) where {T <: Real, P <: Prior}
-
-                     
+                     inverter::Symbol = :block_inv,
+                     upd_grad::Symbol = :unique) where {T <: Real, P <: Prior}
+                          
     flag = 0
     c = if state === nothing
         state = EPState{T}(sum(size(F)), size(F)[2])
@@ -225,12 +227,11 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
      
     Ny,Nx = size(F)
     N = Nx + Ny
-    @assert size(P0,1) == N
+    @assert size(Pv,1) + size(Ph,1) == N
     Fp = copy(F')
     Nv, Nh = size(H[1].w)
     @assert Nv+Nh == Nx
 
-    
 
     for iter = 1:maxiter
         sum!(A,y,H)
@@ -258,20 +259,11 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
 
             Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
             Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
-
-            #println("$(s[i])\n")
-            #println("$(b[i]) $ss $(b[i]-ss) $(s[i])\n")
-
-            # if ss < b[i]
-            #     Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
-            #     Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
-            # else
-            #     ss == b[i] && @warn "infinite var, ss = $ss"
-            #     Δs = max(Δs, update_err!(s, i, maxvar))
-            #     Δμ = max(Δμ, update_err!(μ, i, 0))
-            # end
-
-            tav, tva = moments(P0[i], μ[i], s[i]);
+            if i <= Nv
+                tav, tva = moments(Pv[i], μ[i], s[i]);
+            else
+                tav, tva = moments(Ph[i-Nv], μ[i], s[i]);
+            end
             Δav = max(Δav, update_err!(av, i, tav))
             Δva = max(Δva, update_err!(va, i, tva))
             (isnan(av[i]) || isnan(va[i])) && @warn "avnew = $(av[i]) varnew = $(va[i])"
@@ -283,14 +275,19 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         end
 
         # learn prior's params
-         for i in randperm(N)
-             gradient(P0[i], μ[i], s[i]);
-         end
+        for i in 1:Nv
+            gradient(Pv[i], μ[i], s[i]);
+        end
+        for i in 1:Nh
+            gradient(Ph[i], μ[i+Nv], s[i+Nv]);
+        end
+        gradient!(Pv, upd_grad)
+        gradient!(Ph, upd_grad)
         # learn β params
         # for i in 1:length(H)
         #     updateβ(H[i], av[1:Nx])
         # end
-        ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H,P0)
+        ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H)
         if mod(iter, nprint) == 0
             println("it: ", iter, " Δav: ", Δav)
         end

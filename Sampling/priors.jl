@@ -136,56 +136,6 @@ function moments(p0::SpikeSlabPrior,μ,σ2)
 end
 
 
-function gradient(p0::SpikeSlabPrior, μ, σ2)
-    s = σ2
-    d = 1 + p0.λ * s;
-    q = sqrt(p0.λ * s / d);
-    f = exp(-μ^2 / (2s*d));
-    den = (1 - p0.ρ) * f + q * p0.ρ;
-    # update ρ
-    if p0.δρ > 0
-        #p0.ρ += p0.δρ * (q - f) / den;
-        #p0.ρ = clamp(p0.ρ, 0, 1)
-        p0.∂ρ = (q-f) / den;
-    end
-    # update λ
-    if p0.δλ > 0
-        num = s * (1 + p0.λ * (s - μ^2)) / (2q * d^3) * p0.ρ;
-        p0.∂λ = num/den
-        #p0.λ += p0.δλ * num/den;
-        #p0.λ = max(p0.λ, 0)
-    end
-end
-
-function gradient!(p0::Vector{SpikeSlabPrior}, upd_grad::Symbol) 
-
-    N = length(p0)
-    if upd_grad == :unique
-        Δρ = 0.0
-        Δλ = 0.0
-        for i in 1:N
-            Δρ += p0[i].∂ρ 
-            Δλ += p0[i].∂λ 
-        end
-        Δρ /= N
-        Δλ /= N
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * Δρ
-            p0[i].λ += p0[i].δλ * Δλ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-            p0[i].λ = max(p0[i].λ, 0.0)
-        end
-    else
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * p0[i].∂ρ
-            p0[i].λ += p0[i].δλ * p0[i].∂λ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-            p0[i].λ = max(p0[i].λ, 0.0)
-        end
-    end
-
-end
-
 """
 Binary Prior
 
@@ -220,50 +170,6 @@ function moments(p0::BinaryPrior, μ, σ2)
     return av,va
 end
 
-
-function gradient(p0::BinaryPrior, μ, σ2)
-
-    arg = -1/(2*σ2) * ( p0.x0^2 - p0.x1^2 + 2 * μ * (p0.x1 - p0.x0) )
-    earg = exp(arg)
-    Z = p0.ρ * earg + (1-p0.ρ)
-
-    if (isnan(Z) || isinf(Z))
-        println("Infinite Z\n")
-        Z = p0.ρ + (1-p0.ρ) / earg;
-        if p0.δρ > 0
-            #p0.ρ += p0.δρ * (1 - 1 / earg) / Z;
-            #p0.ρ = clamp(p0.ρ, 0, 1)
-            p0.∂ρ = (1.0 - 1.0/earg)  / Z;
-        end
-    elseif p0.δρ > 0
-        #p0.ρ += p0.δρ * (earg - 1) / Z;
-        #p0.ρ = clamp(p0.ρ, 0, 1)
-        p0.∂ρ = (earg - 1.0) / Z;
-    end
-
-end
-
-function gradient!(p0::Vector{BinaryPrior}, upd_grad::Symbol) 
-
-    N = length(p0)
-    if upd_grad == :unique
-        Δρ = 0.0
-        for i in 1:N
-            Δρ += p0[i].∂ρ 
-        end
-        Δρ /= N
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * Δρ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-        end
-    else
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * p0[i].∂ρ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-        end
-    end
-
-end
 
 #Gaussian prior
 
@@ -472,61 +378,6 @@ function moments(p0::ReLUPrior,μ,σ2)
     return av, va
 
 end
-
-function gradient(p0::ReLUPrior,μ,σ2)
-
-    m = (μ+p0.θ*σ2)/(1+p0.γ*σ2)
-    s = σ2/(1+p0.γ*σ2)
-
-    if s <0
-        throw(DomainError("Combined variance must be positive"))
-    end
-
-    α = m/sqrt(s)
-
-    g_γ = -0.5* s * ( 1 + pdf_cf(α) * α/sqrt(2) )
-    g_θ = pdf_cf(α) * sqrt(s/2)
-
-    #update
-    if p0.δγ > 0
-        #p0.γ += p0.δγ * g_γ
-        p0.∂γ = g_γ
-    end
-
-    if p0.δθ > 0
-        #p0.θ += p0.δθ * g_θ   
-        p0.∂θ = g_θ 
-    end
-
-end
-
-
-function gradient!(p0::Vector{ReLUPrior}, upd_grad::Symbol) 
-
-    N = length(p0)
-    if upd_grad == :unique
-        Δγ = 0.0
-        Δθ = 0.0
-        for i in 1:N
-            Δγ += p0[i].∂γ
-            Δθ += p0[i].∂θ
-        end
-        Δγ /= N
-        Δθ /= N
-        for i in 1:N
-            p0[i].γ += p0[i].δγ * Δγ
-            p0[i].θ += p0[i].δθ * Δθ
-        end
-        println(Δγ, " ", Δθ)
-    else
-        for i in 1:N
-            p0[i].γ += p0[i].δγ * p0[i].∂γ
-            p0[i].θ += p0[i].δθ * p0[i].∂θ
-        end
-    end
-
-end
-
 
 """
 

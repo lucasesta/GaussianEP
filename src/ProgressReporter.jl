@@ -13,7 +13,7 @@ mutable struct ProgressReporter
     end
 end
 
-function (r::ProgressReporter)(av, Δav, epsconv, maxiter, H, P0)
+function (r::ProgressReporter)(av, Δav, epsconv, maxiter)
     r.t += 1
     crit1 = min(1,log(Δav)/log(max(epsconv)))
     crit2 = r.t/maxiter

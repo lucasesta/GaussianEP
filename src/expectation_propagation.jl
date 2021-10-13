@@ -95,7 +95,9 @@ julia> res = expectation_propagation([t], P, F)
 GaussianEP.EPOut{Float64}([0.499997, 0.499997, 3.66527e-15], [0.083325, 0.083325, 0.204301], [0.489862, 0.489862, 3.66599e-15], [334.018, 334.018, 0.204341], :converged, EPState{Float64}([9.79055 -0.00299477; -0.00299477 9.79055], [0.0, 0.0], [0.102139 3.12427e-5; 3.12427e-5 0.102139], [0.489862, 0.489862], [0.499997, 0.499997, 3.66527e-15], [0.083325, 0.083325, 0.204301], [0.490876, 0.490876, -1.86785e-17], [0.489862, 0.489862, 3.66599e-15], [0.100288, 0.100288, 403.599], [334.018, 334.018, 0.204341]))
 ```
 """
-function expectation_propagation(H::AbstractVector{Term{T}}, P0::AbstractVector{P}, F::AbstractMatrix{T} = zeros(T,0,length(P0)), d::AbstractVector{T} = zeros(T,size(F,1));
+function expectation_propagation(H::AbstractVector{Term{T}}, P0::AbstractVector{P};
+                     F::AbstractMatrix{T} = zeros(T,0,length(P0)),
+                     d::AbstractVector{T} = zeros(T,size(F,1)),
                      maxiter::Int = 2000,
                      callback = (x...)->nothing,
                      state::EPState{T} = EPState{T}(sum(size(F)), size(F)[2]),
@@ -197,7 +199,7 @@ Optional named arguments:
 * `inverter = block_inv`: inverter method
 
 """
-function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVector{P},Ph::AbstractVector{P}; 
+function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVector{P1}, Ph::AbstractVector{P2}; 
                      F::AbstractMatrix{T} = zeros(T,0,length(Pv)+length(Ph)),
                      d::AbstractVector{T} = zeros(T,size(F,1)),
                      maxiter::Int = 2000,
@@ -209,7 +211,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVect
                      minvar::T = T(-1e50),
                      nprint::Int = 100,
                      inverter::Symbol = :block_inv,
-                     upd_grad::Symbol = :unique) where {T <: Real, P <: Prior}
+                     upd_grad::Symbol = :unique) where {T <: Real, P1 <: Prior, P2 <: Prior}
                           
     flag = 0
     c = if state === nothing

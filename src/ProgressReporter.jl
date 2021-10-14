@@ -13,11 +13,11 @@ mutable struct ProgressReporter
     end
 end
 
-function (r::ProgressReporter)(av, Δav, epsconv, maxiter)
+function (r::ProgressReporter)(av, Δav, Δgrad, epsconv, maxiter)
     r.t += 1
     crit1 = min(1,log(Δav)/log(max(epsconv)))
     crit2 = r.t/maxiter
-    r.prog.desc = @sprintf("%5d %.2e                  ", r.t, Δav)
+    r.prog.desc = @sprintf("%5d %.2e %.2e                 ", r.t, Δav,Δgrad)
     ProgressMeter.update!(r.prog, Int(floor(max(crit1,crit2)*10000)), crit1>crit2 ? :green : :red)
 end
 

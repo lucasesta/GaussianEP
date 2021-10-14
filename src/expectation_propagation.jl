@@ -233,7 +233,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVect
     Fp = copy(F')
     Nv, Nh = size(H[1].w)
     @assert Nv+Nh == Nx
-
+    Δgrad = 0.0
 
     for iter = 1:maxiter
         sum!(A,y,H)
@@ -283,17 +283,17 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVect
         for i in 1:Nh
             gradient(Ph[i], μ[i+Nv], s[i+Nv]);
         end
-        gradient!(Pv, upd_grad)
-        gradient!(Ph, upd_grad)
+        Δgrad = max(Δgrad, gradient!(Pv, upd_grad))
+        Δgrad = max(Δgrad, gradient!(Ph, upd_grad))
         # learn β params
         # for i in 1:length(H)
         #     updateβ(H[i], av[1:Nx])
         # end
         ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H)
         if mod(iter, nprint) == 0
-            println("it: ", iter, " Δav: ", Δav)
+            println("it: ", iter, " Δav: ", Δav, " Δgrad: ", Δgrad)
         end
-        if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4)
+        if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4 && Δgrad < 1e-2)
             #println("it: ", iter, " Δav: ", Δav)
             return EPOut(state, :converged)
         end

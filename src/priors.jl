@@ -498,10 +498,11 @@ function gradient(p0::ReLUPrior,μ,σ2)
         throw(DomainError("Combined variance must be positive"))
     end
 
+    α_0 = p0.θ/sqrt(p0.γ)
     α = m/sqrt(s)
 
-    g_γ = -0.5* s * ( 1 + pdf_cf(α) * α/sqrt(2) )
-    g_θ = pdf_cf(α) * sqrt(s/2)
+    g_γ = 0.5 * ( α_0 * pdf_cf(α_0)/p0.γ + 1/(p0.γ*(1+p0.γ*s)) - m * sqrt(s) * pdf_cf(α))
+    g_θ = pdf_cf(α) * sqrt(s) - pdf_cf(α_0)/sqrt(p0.γ)
 
     #update
     if p0.δγ > 0

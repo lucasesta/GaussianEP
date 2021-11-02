@@ -536,6 +536,7 @@ function gradient!(p0::Array{ReLUPrior{T},1}, upd_grad::Symbol) where {T <: Real
             p0[i].θ += p0[i].δθ * Δθ
         end
         Δc = max(abs(γ_old - p0[1].γ), abs(θ_old - p0[1].θ))
+        #println(p0[1].γ, " ", p0[1].θ)
     else
         γ_old = mean(p0[:].γ)
         θ_old = mean(p0[:].θ)

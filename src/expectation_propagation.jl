@@ -199,8 +199,8 @@ Optional named arguments:
 * `inverter = block_inv`: inverter method
 
 """
-function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVector{P1}, Ph::AbstractVector{P2}; 
-                     F::AbstractMatrix{T} = zeros(T,0,length(Pv)+length(Ph)),
+function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P}; 
+                     F::AbstractMatrix{T} = zeros(T,0,length(P0)),
                      d::AbstractVector{T} = zeros(T,size(F,1)),
                      maxiter::Int = 2000,
                      callback = (x...)->nothing,
@@ -211,7 +211,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVect
                      minvar::T = T(-1e50),
                      nprint::Int = 100,
                      inverter::Symbol = :block_inv,
-                     upd_grad::Symbol = :unique) where {T <: Real, P1 <: Prior, P2 <: Prior}
+                     upd_grad::Symbol = :unique) where {T <: Real, P <: Prior}
                           
     flag = 0
     c = if state === nothing
@@ -229,15 +229,14 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVect
      
     Ny,Nx = size(F)
     N = Nx + Ny
-    @assert size(Pv,1) + size(Ph,1) == N
+    @assert size(P0,1) == N
     Fp = copy(F')
     Nv, Nh = size(H[1].w)
     @assert Nv+Nh == Nx
-    Δgrad = 0.0
 
     for iter = 1:maxiter
         sum!(A,y,H)
-        Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0
+        Δgrad, Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0, 0.0
         _, C = Diagonal(1 ./b[1:Nv]), Diagonal(1 ./ b[Nv+1:Nx])
         Bm1 = Diagonal(b[1:Nv])
         if inverter == :block_inv
@@ -261,11 +260,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVect
 
             Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
             Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
-            if i <= Nv
-                tav, tva = moments(Pv[i], μ[i], s[i]);
-            else
-                tav, tva = moments(Ph[i-Nv], μ[i], s[i]);
-            end
+            tav, tva = moments(P0[i], μ[i], s[i]);
             Δav = max(Δav, update_err!(av, i, tav))
             Δva = max(Δva, update_err!(va, i, tva))
             (isnan(av[i]) || isnan(va[i])) && @warn "avnew = $(av[i]) varnew = $(va[i])"
@@ -277,14 +272,9 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, Pv::AbstractVect
         end
 
         # learn prior's params
-        for i in 1:Nv
-            gradient(Pv[i], μ[i], s[i]);
+        for i in 1:Nv+Nh
+            gradient(P0[i], μ[i], s[i]);
         end
-        for i in 1:Nh
-            gradient(Ph[i], μ[i+Nv], s[i+Nv]);
-        end
-        Δgrad = max(Δgrad, gradient!(Pv, upd_grad))
-        Δgrad = max(Δgrad, gradient!(Ph, upd_grad))
         # learn β params
         # for i in 1:length(H)
         #     updateβ(H[i], av[1:Nx])

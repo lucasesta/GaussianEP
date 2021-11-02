@@ -111,10 +111,12 @@ function compute_statistics(samples::Matrix{Float64}, N::Int, M::Int)
     av_mc = zeros(N+M,)
     va_mc = zeros(N+M,)
     cov_mc = zeros(N,M)
+    covv_mc = zeros(N,N)
     C = ones(N,)
 
     samples2 = zeros(N_iter,)
-    vh = zeros(N_iter, )
+    vh = zeros(N_iter,)
+    vv = zeros(N_iter,)
 
     for i = 1:N
         samples2 .= samples[:,i] .^2
@@ -124,7 +126,10 @@ function compute_statistics(samples::Matrix{Float64}, N::Int, M::Int)
             vh .= samples[:,i] .* samples[:,N+j]
             cov_mc[i,j], _, _ = Sampling.Autocorrelation(vh, C)
         end
-
+        for j = 1:N
+            vv .= samples[:,i] .* samples[:,j]
+            covv_mc[i,j], _, _ = Sampling.Autocorrelation(vv,C)
+        end
     end
     for i = 1:M
         samples2 .= samples[:,N+i] .^2
@@ -137,6 +142,6 @@ function compute_statistics(samples::Matrix{Float64}, N::Int, M::Int)
     end
 
 
-    return av_mc, va_mc, cov_mc
+    return av_mc, va_mc, cov_mc, covv_mc
 
 end

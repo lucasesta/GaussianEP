@@ -143,56 +143,61 @@ function gradient(p0::SpikeSlabPrior, μ, σ2)
     q = sqrt(p0.λ * s / d);
     f = exp(-μ^2 / (2s*d));
     den = (1 - p0.ρ) * f + q * p0.ρ;
+    ρ_old = p0.ρ
+    λ_old = p0.λ
+    Δc = 0.0
     # update ρ
     if p0.δρ > 0
-        #p0.ρ += p0.δρ * (q - f) / den;
-        #p0.ρ = clamp(p0.ρ, 0, 1)
+        p0.ρ += p0.δρ * (q - f) / den;
+        p0.ρ = clamp(p0.ρ, 0, 1)
         p0.∂ρ = (q-f) / den;
     end
     # update λ
     if p0.δλ > 0
         num = s * (1 + p0.λ * (s - μ^2)) / (2q * d^3) * p0.ρ;
         p0.∂λ = num/den
-        #p0.λ += p0.δλ * num/den;
-        #p0.λ = max(p0.λ, 0)
+        p0.λ += p0.δλ * num/den;
+        p0.λ = max(p0.λ, 0)
     end
-end
-
-function gradient!(p0::Array{SpikeSlabPrior{T},1}, upd_grad::Symbol) where {T <: Real}
-
-    N = length(p0)    
-    Δc = 0.0
-    if upd_grad == :unique
-        Δρ = 0.0
-        Δλ = 0.0
-        for i in 1:N
-            Δρ += p0[i].∂ρ 
-            Δλ += p0[i].∂λ 
-        end
-        ρ_old = p0[1].ρ
-        λ_old = p0[1].λ
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * Δρ
-            p0[i].λ += p0[i].δλ * Δλ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-            p0[i].λ = max(p0[i].λ, 0.0)
-        end
-        Δc = max(abs(ρ_old - p0[1].ρ), abs(λ_old - p0[1].λ))
-    else
-        ρ_old = mean(p0[:].ρ)
-        λ_old = mean(p0[:].λ)
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * p0[i].∂ρ
-            p0[i].λ += p0[i].δλ * p0[i].∂λ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-            p0[i].λ = max(p0[i].λ, 0.0)
-        end
-        Δc = max(abs(ρ_old - mean(p0[:].ρ)), abs(λ_old - mean(p0[:].λ)))
-    end
-
+    Δc = max(abs(ρ_old - p0.ρ), abs(λ_old - p.λ))
     return Δc
-
 end
+
+# function gradient!(p0::Array{SpikeSlabPrior{T},1}, upd_grad::Symbol) where {T <: Real}
+
+#     N = length(p0)    
+#     Δc = 0.0
+#     if upd_grad == :unique
+#         Δρ = 0.0
+#         Δλ = 0.0
+#         for i in 1:N
+#             Δρ += p0[i].∂ρ 
+#             Δλ += p0[i].∂λ 
+#         end
+#         ρ_old = p0[1].ρ
+#         λ_old = p0[1].λ
+#         for i in 1:N
+#             p0[i].ρ += p0[i].δρ * Δρ
+#             p0[i].λ += p0[i].δλ * Δλ
+#             p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
+#             p0[i].λ = max(p0[i].λ, 0.0)
+#         end
+#         Δc = max(abs(ρ_old - p0[1].ρ), abs(λ_old - p0[1].λ))
+#     else
+#         ρ_old = mean(p0[:].ρ)
+#         λ_old = mean(p0[:].λ)
+#         for i in 1:N
+#             p0[i].ρ += p0[i].δρ * p0[i].∂ρ
+#             p0[i].λ += p0[i].δλ * p0[i].∂λ
+#             p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
+#             p0[i].λ = max(p0[i].λ, 0.0)
+#         end
+#         Δc = max(abs(ρ_old - mean(p0[:].ρ)), abs(λ_old - mean(p0[:].λ)))
+#     end
+
+#     return Δc
+
+# end
 
 """
 Binary Prior
@@ -234,52 +239,56 @@ function gradient(p0::BinaryPrior, μ, σ2)
     arg = -1/(2*σ2) * ( p0.x0^2 - p0.x1^2 + 2 * μ * (p0.x1 - p0.x0) )
     earg = exp(arg)
     Z = p0.ρ * earg + (1-p0.ρ)
-
+    ρ_old = p0.ρ
     if (isnan(Z) || isinf(Z))
         println("Infinite Z\n")
         Z = p0.ρ + (1-p0.ρ) / earg;
         if p0.δρ > 0
-            #p0.ρ += p0.δρ * (1 - 1 / earg) / Z;
-            #p0.ρ = clamp(p0.ρ, 0, 1)
+            p0.ρ += p0.δρ * (1 - 1 / earg) / Z;
+            p0.ρ = clamp(p0.ρ, 0, 1)
             p0.∂ρ = (1.0 - 1.0/earg)  / Z;
         end
     elseif p0.δρ > 0
-        #p0.ρ += p0.δρ * (earg - 1) / Z;
-        #p0.ρ = clamp(p0.ρ, 0, 1)
+        p0.ρ += p0.δρ * (earg - 1) / Z;
+        p0.ρ = clamp(p0.ρ, 0, 1)
         p0.∂ρ = (earg - 1.0) / Z;
     end
 
-end
-
-function gradient!(p0::Array{BinaryPrior{T},1}, upd_grad::Symbol)  where {T <: Real}
-
-    N = length(p0)
-    Δc = 0.0
-    if upd_grad == :unique
-        Δρ = 0.0
-        Δc = 0.0
-        for i in 1:N
-            Δρ += p0[i].∂ρ 
-        end
-        #Δρ /= N
-        ρ_old = p0[1].ρ
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * Δρ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-        end
-        Δc = abs(ρ_old - p0[1].ρ)
-    else
-        ρ_old = mean(p0[:].ρ)
-        for i in 1:N
-            p0[i].ρ += p0[i].δρ * p0[i].∂ρ
-            p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
-        end
-        Δc = abs(ρ_old - mean(p0[:].ρ))
-    end
+    Δc = abs(ρ_old - p0.ρ)
 
     return Δc
 
 end
+
+# function gradient!(p0::Array{BinaryPrior{T},1}, upd_grad::Symbol)  where {T <: Real}
+
+#     N = length(p0)
+#     Δc = 0.0
+#     if upd_grad == :unique
+#         Δρ = 0.0
+#         Δc = 0.0
+#         for i in 1:N
+#             Δρ += p0[i].∂ρ 
+#         end
+#         #Δρ /= N
+#         ρ_old = p0[1].ρ
+#         for i in 1:N
+#             p0[i].ρ += p0[i].δρ * Δρ
+#             p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
+#         end
+#         Δc = abs(ρ_old - p0[1].ρ)
+#     else
+#         ρ_old = mean(p0[:].ρ)
+#         for i in 1:N
+#             p0[i].ρ += p0[i].δρ * p0[i].∂ρ
+#             p0[i].ρ = clamp(p0[i].ρ, 0.0, 1.0)
+#         end
+#         Δc = abs(ρ_old - mean(p0[:].ρ))
+#     end
+
+#     return Δc
+
+# end
 
 #Gaussian prior
 
@@ -504,52 +513,60 @@ function gradient(p0::ReLUPrior,μ,σ2)
     g_γ = 0.5 * ( α_0 * pdf_cf(α_0)/p0.γ + 1/(p0.γ*(1+p0.γ*s)) - m * sqrt(s) * pdf_cf(α))
     g_θ = pdf_cf(α) * sqrt(s) - pdf_cf(α_0)/sqrt(p0.γ)
 
+    γ_old = p0.γ
+    θ_old = p0.θ
+    Δc = 0.0
+
     #update
     if p0.δγ > 0
-        #p0.γ += p0.δγ * g_γ
+        p0.γ += p0.δγ * g_γ
         p0.∂γ = g_γ
     end
 
     if p0.δθ > 0
-        #p0.θ += p0.δθ * g_θ   
+        p0.θ += p0.δθ * g_θ   
         p0.∂θ = g_θ 
     end
 
-end
-
-
-function gradient!(p0::Array{ReLUPrior{T},1}, upd_grad::Symbol) where {T <: Real}
-
-    N = length(p0)
-    Δc = 0.0
-    if upd_grad == :unique
-        Δγ = 0.0
-        Δθ = 0.0
-        for i in 1:N
-            Δγ += p0[i].∂γ
-            Δθ += p0[i].∂θ
-        end
-        γ_old = p0[1].γ
-        θ_old = p0[1].θ
-        for i in 1:N
-            p0[i].γ += p0[i].δγ * Δγ
-            p0[i].θ += p0[i].δθ * Δθ
-        end
-        Δc = max(abs(γ_old - p0[1].γ), abs(θ_old - p0[1].θ))
-        #println(p0[1].γ, " ", p0[1].θ)
-    else
-        γ_old = mean(p0[:].γ)
-        θ_old = mean(p0[:].θ)
-        for i in 1:N
-            p0[i].γ += p0[i].δγ * p0[i].∂γ
-            p0[i].θ += p0[i].δθ * p0[i].∂θ
-        end
-        Δc = max(abs(γ_old - mean(p0[:].γ)), abs(θ_old - mean(p0[:].θ)))
-    end
+    Δc = max(abs(γ_old - p0.γ), abs(θ_old - p0.θ))
 
     return Δc
 
 end
+
+
+# function gradient!(p0::Array{ReLUPrior{T},1}, upd_grad::Symbol) where {T <: Real}
+
+#     N = length(p0)
+#     Δc = 0.0
+#     if upd_grad == :unique
+#         Δγ = 0.0
+#         Δθ = 0.0
+#         for i in 1:N
+#             Δγ += p0[i].∂γ
+#             Δθ += p0[i].∂θ
+#         end
+#         γ_old = p0[1].γ
+#         θ_old = p0[1].θ
+#         for i in 1:N
+#             p0[i].γ += p0[i].δγ * Δγ
+#             p0[i].θ += p0[i].δθ * Δθ
+#         end
+#         Δc = max(abs(γ_old - p0[1].γ), abs(θ_old - p0[1].θ))
+#         #println(p0[1].γ, " ", p0[1].θ)
+#     else
+#         γ_old = mean(p0[:].γ)
+#         θ_old = mean(p0[:].θ)
+#         for i in 1:N
+#             p0[i].γ += p0[i].δγ * p0[i].∂γ
+#             p0[i].θ += p0[i].δθ * p0[i].∂θ
+#         end
+#         Δc = max(abs(γ_old - mean(p0[:].γ)), abs(θ_old - mean(p0[:].θ)))
+#     end
+
+#     return Δc
+
+# end
 
 
 """

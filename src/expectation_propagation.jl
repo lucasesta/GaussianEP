@@ -211,7 +211,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                      minvar::T = T(-1e50),
                      nprint::Int = 100,
                      inverter::Symbol = :block_inv,
-                     upd_grad::Symbol = :unique) where {T <: Real, P <: Prior}
+                     epsgrad::T = 1.0e-2) where {T <: Real, P <: Prior}
                           
     flag = 0
     c = if state === nothing
@@ -273,7 +273,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
 
         # learn prior's params
         for i in 1:Nv+Nh
-            gradient(P0[i], μ[i], s[i]);
+            Δgrad = max(Δgrad,gradient(P0[i], μ[i], s[i]));
         end
         # learn β params
         # for i in 1:length(H)
@@ -283,7 +283,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         if mod(iter, nprint) == 0
             println("it: ", iter, " Δav: ", Δav, " Δgrad: ", Δgrad)
         end
-        if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4 && Δgrad < 1e-2)
+        if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4 && Δgrad < epsgrad)
             #println("it: ", iter, " Δav: ", Δav)
             return EPOut(state, :converged)
         end

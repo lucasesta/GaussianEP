@@ -139,6 +139,24 @@ function Pot(P::SpikeSlabPrior,x)
 
 end
 
+function bernoulli!(x::Array{T,1}) where{T <: Real}
+
+    for i in eachindex(x)
+        @inbounds x[i] = float(rand() < x[i])
+     end
+     x
+
+end
+
+function sigm!(x::Array{T,1}) where{T <: Real}
+    
+    for i in eachindex(x)
+       @inbounds x[i] = 1.0/(1.0 + exp(-x[i]))
+    end
+    x
+ end
+
+
 """
 
     JackKnife: function computing average and uncertainty via JK method

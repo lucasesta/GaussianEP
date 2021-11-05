@@ -1,7 +1,7 @@
 
 #Function performing a MC simulation: print on file the state x=(v,h)
 #for every MC step after a thermalization time t_wait
-using BenchmarkTools
+using BenchmarkTools, LinearAlgebra
 mutable struct MCout{T<:AbstractFloat}
     samples::Matrix{T}
     vh::Array{T,3}
@@ -103,6 +103,135 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
     return samples
 
 end
+
+function gibbssampling(x::Array{Float64,1},w::Matrix{R},P::Array{T,1}, N_iter::Int64;
+                        N::Int64=size(w,1),
+                        M::Int64=size(w,2)) where {T <: Prior, R <: Real}
+
+    gibbssampling!(x,w,P,N_iter)
+
+    return x
+
+end
+
+function gibbssampling!(x::Array{Float64,1},w::Matrix{R},P::Array{T,1}, N_iter::Int64;
+                        N::Int64=size(w,1),
+                        M::Int64=size(w,2)) where {T <: Prior, R <: Real}
+
+    @assert length(x) == N+M
+    v = copy(x[1:N])
+    h = copy(x[N+1:N+M])
+
+    for n=1:N_iter
+        sample_cond!(w,v,P[1],x[N+1:N+M])
+        sample_cond!(w',h,P[N+1],x[1:N])
+    end
+
+    x[1:N] .= v
+    x[N+1:N+M] .= h
+
+    return
+
+end
+
+#Bernoulli variables block
+
+function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+
+    sample_pot!(potential!(w,x1,P,x2),P)
+
+end
+
+function sample_pot!(x1::Array{R,1},P::BinaryPrior) where R <: Real
+
+    bernoulli!(x1)
+
+end
+
+function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+
+    input!(w,x1,P,x2)
+    sigm!(x1)
+
+end
+
+function input!(w::AbstractMatrix{R},x1::Array{R,1},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+
+    θ_B = log((1-P.ρ)/(P.ρ))
+    mul!(x1,w,x2)
+    x1 .+= θ_B
+
+end
+
+# ReLU variables block
+
+function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::ReLUPrior,x2::Array{R,1}) where R <: Real
+
+    sample_pot!(potential!(w,x1,P,x2),P)
+
+end
+
+function sample_pot!(x1::Array{R,1},P::ReLUPrior) where R <: Real
+
+    z = fill(-1.0,length(x1))
+
+    for i=1:length(x1)
+        while z[i] < 0
+            z[i] = randn()
+        end
+    end
+
+    z ./= sqrt(P.γ) 
+    z .+= x1
+    
+
+end
+
+function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::ReLUPrior,x2::Array{R,1}) where R <: Real
+
+    mul!(x1,w,x2)
+    x1 .+= P.θ
+    x1 ./= P.γ
+
+end
+
+#Initialization of state
+function initialize_state(P0::Array{Q,1},N::Int,M::Int) where Q <: Prior
+
+    v = zeros(N)
+    h = zeros(M)
+    init!(v,P0[1])
+    init!(h,P0[N+1])
+
+    return vcat(v,h)
+
+end
+
+function init!(x::Array{T,1}, P::BinaryPrior) where T <: Real
+
+    θ_B = log((1-P.ρ)/(P.ρ))
+    x .+= θ_B
+    sigm!(x)
+    bernoulli!(x)
+
+end
+
+function init!(x::Array{T,1}, P::ReLUPrior) where T <: Real
+
+    z = fill(-1.0,length(x1))
+
+    for i=1:length(x1)
+        while z[i] < 0
+            z[i] = randn()
+        end
+    end
+
+    z ./= sqrt(P.γ) 
+    z .+= P.θ/P.γ
+    
+end
+
+#Compute Metropolis MC output statistics
 
 function compute_statistics(samples::Matrix{Float64}, N::Int, M::Int)
 

@@ -212,27 +212,28 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                      nprint::Int = 100,
                      inverter::Symbol = :block_inv,
                      epsgrad::T = 1.0e-2) where {T <: Real, P <: Prior}
-                          
-    flag = 0
-    c = if state === nothing
-        state = EPState{T}(sum(size(F)), size(F)[2])
-        flag = 1
-        min_diagel(H[1].w) 
-    end
-
-    @extract state A y Σ v av va a μ b s
-
-    if flag == 1
-        b .= 1/c
-    end
     
-     
     Ny,Nx = size(F)
     N = Nx + Ny
     @assert size(P0,1) == N
     Fp = copy(F')
     Nv, Nh = size(H[1].w)
     @assert Nv+Nh == Nx
+    
+    flag = 0
+    c = if state === nothing
+        state = EPState{T}(sum(size(F)), size(F)[2])
+        flag = 1
+        min_diagel(H[1].w,P0[1],P0[Nv+1]) 
+    end
+
+    @extract state A y Σ v av va a μ b s
+
+    if flag == 1
+        b .= 1 ./ c
+    end
+
+    fail = 0
 
     for iter = 1:maxiter
         sum!(A,y,H)
@@ -257,10 +258,18 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                 ss = clamp(dot(F[i-Nx,:], Σ*Fp[:,i-Nx]), minvar, maxvar)
                 vv = dot(Fp[:,i-Nx], v) + d[i-Nx]
             end
-
             Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
             Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
-            tav, tva = moments(P0[i], μ[i], s[i]);
+            tav, tva = try
+                moments(P0[i], μ[i], s[i])
+            catch err
+                if isa(err,DomainError)
+                    println("combined variance must be positive")
+                    fail = 1
+                    return EPOut(state, :unconverged), fail
+                end
+            end
+            #tav, tva = moments(P0[i], μ[i], s[i])
             Δav = max(Δav, update_err!(av, i, tav))
             Δva = max(Δva, update_err!(va, i, tva))
             (isnan(av[i]) || isnan(va[i])) && @warn "avnew = $(av[i]) varnew = $(va[i])"
@@ -285,10 +294,10 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         end
         if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4 && Δgrad < epsgrad)
             #println("it: ", iter, " Δav: ", Δav)
-            return EPOut(state, :converged)
+            return EPOut(state, :converged), fail
         end
     end
-    return EPOut(state, :unconverged)
+    return EPOut(state, :unconverged), fail
 end
 
 function block_inv(w::Matrix{T}, Bm1::Diagonal{T,Array{T,1}}, C::Diagonal{T,Array{T,1}}) where {T <: AbstractFloat}
@@ -308,16 +317,60 @@ function block_inv(w::Matrix{T}, Bm1::Diagonal{T,Array{T,1}}, C::Diagonal{T,Arra
     return Σ
 end
 
-function min_diagel(w::Matrix{Float64}; ϵ::Float64=0.5)
+function min_diagel(w::Matrix{Float64}, Pv::P, Ph::P; ϵ::Float64=0.5) where P <: Prior
 
     N = size(w,1)
+    M = size(w,2)
 
+    c = zeros(Float64,N+M)
     W = zeros(Float64,N,N)
     W = w*w'
 
     λ_max = eigen(W).values[end]
 
-    c = sqrt(λ_max)+ϵ
+    c .= sqrt(λ_max)+ϵ
+
+    return c
+
+end
+
+function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=0.5)
+
+    N = size(w,1)
+    M = size(w,2)
+
+    c = zeros(N+M)
+    W = zeros(Float64,N,N)
+    W = w*w'
+
+    λ_max = eigen(W).values[end]
+
+    b = 1 / (Pv.ρ * (1 - Pv.ρ))
+    d = λ_max / b
+
+    c[1:N] .= b
+    c[N+1:N+M] .= d+ϵ
+
+    return c
+
+end
+
+function min_diagel(w::Matrix{Float64}, Pv::GaussianPrior, Ph::ReLUPrior; ϵ::Float64=0.5)
+
+    N = size(w,1)
+    M = size(w,2)
+
+    c = zeros(N+M)
+    W = zeros(Float64,N,N)
+    W = w*w'
+
+    λ_max = eigen(W).values[end]
+
+    b = Pv.β    
+    d = λ_max / b
+
+    c[1:N] .= b
+    c[N+1:N+M] .= d+ϵ
 
     return c
 

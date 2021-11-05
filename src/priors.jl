@@ -486,7 +486,7 @@ function moments(p0::ReLUPrior,μ,σ2)
     s = σ2/(1+p0.γ*σ2)
 
     if s <0
-        throw(DomainError("Combined variance must be positive"))
+        throw(DomainError("combined variance must be positive"))
     end
 
     α = m/sqrt(s)

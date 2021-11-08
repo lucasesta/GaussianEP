@@ -1,7 +1,8 @@
 
 #Function performing a MC simulation: print on file the state x=(v,h)
 #for every MC step after a thermalization time t_wait
-using BenchmarkTools, LinearAlgebra
+#using BenchmarkTools, LinearAlgebra
+using LinearAlgebra
 mutable struct MCout{T<:AbstractFloat}
     samples::Matrix{T}
     vh::Array{T,3}
@@ -135,6 +136,16 @@ function gibbssampling!(x::Array{Float64,1},w::Matrix{R},P::Array{T,1}, N_iter::
 end
 
 #Bernoulli variables block
+
+function sample_cond(w::AbstractMatrix{R},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+
+    v = zeros(size(w,1))
+
+    sample_pot!(potential!(w,v,P,x2),P)
+
+    return v
+
+end
 
 function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::BinaryPrior,x2::Array{R,1}) where R <: Real
 

@@ -234,6 +234,8 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
     end
 
     fail = 0
+    println("$damp\n")
+    epsconv = 1.0e-3 * (1.0 - damp)
 
     for iter = 1:maxiter
         sum!(A,y,H)
@@ -294,10 +296,10 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         end
         if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4 && Δgrad < epsgrad)
             #println("it: ", iter, " Δav: ", Δav)
-            return EPOut(state, :converged), fail
+            return EPOut(state, :converged), fail, iter
         end
     end
-    return EPOut(state, :unconverged), fail
+    return EPOut(state, :unconverged), fail, maxiter
 end
 
 function block_inv(w::Matrix{T}, Bm1::Diagonal{T,Array{T,1}}, C::Diagonal{T,Array{T,1}}) where {T <: AbstractFloat}

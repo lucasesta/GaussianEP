@@ -197,6 +197,7 @@ Optional named arguments:
 * `maxvar::T = 1e50`: maximum variance
 * `minvar::T = 1e-50`: minimum variance
 * `inverter = block_inv`: inverter method
+* `epsgrad::T = 1.0e-2`: tolerance over prior parameters
 
 """
 function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P}; 
@@ -206,7 +207,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                      callback = (x...)->nothing,
                      state::Union{EPState{T},Nothing} = nothing,
                      damp::T = T(0.9),
-                     epsconv::T = T(1e-6),
+                     epsconv::T = 1.0e-2 * (1.0 - damp),
                      maxvar::T = T(1e50),
                      minvar::T = T(-1e50),
                      nprint::Int = 100,
@@ -234,8 +235,6 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
     end
 
     fail = 0
-    println("$damp\n")
-    epsconv = 1.0e-3 * (1.0 - damp)
 
     for iter = 1:maxiter
         sum!(A,y,H)
@@ -328,8 +327,7 @@ function min_diagel(w::Matrix{Float64}, Pv::P, Ph::P; ϵ::Float64=0.5) where P <
     W = zeros(Float64,N,N)
     W = w*w'
 
-    λ_max = eigen(W).values[end]
-
+    λ_max = eigmax(W)
     c .= sqrt(λ_max)+ϵ
 
     return c
@@ -345,7 +343,7 @@ function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Floa
     W = zeros(Float64,N,N)
     W = w*w'
 
-    λ_max = eigen(W).values[end]
+    λ_max = eigmax(W)
 
     b = 1 / (Pv.ρ * (1 - Pv.ρ))
     d = λ_max / b
@@ -366,7 +364,7 @@ function min_diagel(w::Matrix{Float64}, Pv::GaussianPrior, Ph::ReLUPrior; ϵ::Fl
     W = zeros(Float64,N,N)
     W = w*w'
 
-    λ_max = eigen(W).values[end]
+    λ_max = eigmax(W)
 
     b = Pv.β    
     d = λ_max / b

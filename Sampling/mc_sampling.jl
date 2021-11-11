@@ -125,7 +125,7 @@ function gibbssampling!(x::Array{Float64,1},w::Matrix{R},P::Array{T,1}, N_iter::
 
     for n=1:N_iter
         sample_cond!(w,v,P[1],x[N+1:N+M])
-        sample_cond!(w',h,P[N+1],x[1:N])
+        sample_cond!(w',h,P[N+1],v)
     end
 
     x[1:N] .= v

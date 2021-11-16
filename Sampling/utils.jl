@@ -82,6 +82,32 @@ function EnerVar(y::Array{Float64,1},w::Array{Float64,1},P::Prior, x::Float64, x
 
 end
 
+function energy(w::Matrix{T}, x::Vector{T}, P0::Vector{P}) where {T <: Real, P <: Prior}
+
+    N,M = (size(w,1),size(w,2))
+
+    e_v = - pot(view(x,1:N),P0[1:N])
+
+    e_h = - pot(view(x,N+1:N+M),P0[N+1:N+M])
+
+    e_w = - dot(view(x,1:N),w*view(x,N+1:N+M))
+
+    e_tot = e_w + e_v + e_h
+
+    return e_v, e_h, e_w, e_tot
+
+end
+
+function pot(x, P)
+
+    L = length(x)
+    θ_B = zeros(L)
+    θ_B = map(x->log((1-x.ρ)/x.ρ), P)
+    return dot(θ_B,x)
+
+end
+
+
 """
 
     Functions defining different potential energies

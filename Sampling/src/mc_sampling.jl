@@ -2,7 +2,6 @@
 #Function performing a MC simulation: print on file the state x=(v,h)
 #for every MC step after a thermalization time t_wait
 #using BenchmarkTools, LinearAlgebra
-using LinearAlgebra
 mutable struct MCout{T<:AbstractFloat}
     samples::Matrix{T}
     vh::Array{T,3}

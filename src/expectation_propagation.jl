@@ -318,7 +318,7 @@ function block_inv(w::Matrix{T}, Bm1::Diagonal{T,Array{T,1}}, C::Diagonal{T,Arra
     return Σ
 end
 
-function min_diagel(w::Matrix{Float64}, Pv::P, Ph::P; ϵ::Float64=0.5) where P <: Prior
+function min_diagel(w::Matrix{Float64}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {P1 <: Prior, P2 <: Prior}
 
     N = size(w,1)
     M = size(w,2)

@@ -44,7 +44,7 @@ end
 """
 function gradient(p0::T, μ, σ) where T <: Prior
     #by default, do nothing
-    return
+    return 0.0
 end
 
 function gradient!(p0::Vector{P}, upd_grad::Symbol) where P <: Prior
@@ -159,7 +159,7 @@ function gradient(p0::SpikeSlabPrior, μ, σ2)
         p0.λ += p0.δλ * num/den;
         p0.λ = max(p0.λ, 0)
     end
-    Δc = max(abs(ρ_old - p0.ρ), abs(λ_old - p.λ))
+    Δc = max(abs(ρ_old - p0.ρ), abs(λ_old - p0.λ))
     return Δc
 end
 

@@ -267,7 +267,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                 if isa(err,DomainError)
                     println("combined variance must be positive")
                     fail = 1
-                    return EPOut(state, :unconverged), fail
+                    return EPOut(state, :unconverged), fail, iter
                 end
             end
             #tav, tva = moments(P0[i], μ[i], s[i])
@@ -334,7 +334,7 @@ function min_diagel(w::Matrix{Float64}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {
 
 end
 
-function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=0.5)
+function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=5.0)
 
     N = size(w,1)
     M = size(w,2)

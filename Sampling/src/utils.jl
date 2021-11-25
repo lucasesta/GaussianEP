@@ -82,13 +82,13 @@ function EnerVar(y::Array{Float64,1},w::Array{Float64,1},P::Prior, x::Float64, x
 
 end
 
-function energy(w::Matrix{T}, x::Vector{T}, P0::Vector{P}) where {T <: Real, P <: Prior}
+function energy(w::Matrix{T}, x::Vector{T}, Pv::Vector{P1}, Ph::Vector{P2}) where {T <: Real, P1 <: Prior, P2 <: Prior}
 
     N,M = (size(w,1),size(w,2))
 
-    e_v = - pot(view(x,1:N),P0[1:N])
+    e_v = - pot(view(x,1:N),Pv)
 
-    e_h = - pot(view(x,N+1:N+M),P0[N+1:N+M])
+    e_h = - pot(view(x,N+1:N+M),Ph)
 
     e_w = - dot(view(x,1:N),w*view(x,N+1:N+M))
 
@@ -98,7 +98,7 @@ function energy(w::Matrix{T}, x::Vector{T}, P0::Vector{P}) where {T <: Real, P <
 
 end
 
-function pot(x, P)
+function pot(x, P::Vector{BinaryPrior{T}}) where T <: Real
 
     L = length(x)
     θ_B = zeros(L)
@@ -107,6 +107,17 @@ function pot(x, P)
 
 end
 
+function pot(x, P::Vector{ReLUPrior{T}}) where T <: Real
+
+    L = length(x)
+    θ = zeros(L)
+    γ = zeros(L)
+
+    θ = map(x->x.θ,P)
+    γ = map(x->x.γ,P)
+    return sum(-0.5 * γ .* x.^2 + θ .* x)
+
+end
 
 """
 

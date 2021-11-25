@@ -104,27 +104,27 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
 
 end
 
-function gibbssampling(x::Array{Float64,1},w::Matrix{R},P::Array{T,1}, N_iter::Int64;
+function gibbssampling(x::Array{Float64,1},w::Matrix{R},Pv::Vector{T1},Ph::Vector{T2},N_iter::Int64;
                         N::Int64=size(w,1),
-                        M::Int64=size(w,2)) where {T <: Prior, R <: Real}
+                        M::Int64=size(w,2)) where {T1 <: Prior, T2 <: Prior, R <: Real}
 
-    gibbssampling!(x,w,P,N_iter)
+    gibbssampling!(x,w,Pv,Ph,N_iter)
 
     return x
 
 end
 
-function gibbssampling!(x::Array{Float64,1},w::Matrix{R},P::Array{T,1}, N_iter::Int64;
+function gibbssampling!(x::Array{Float64,1},w::Matrix{R},Pv::Vector{T1},Ph::Vector{T2},N_iter::Int64;
                         N::Int64=size(w,1),
-                        M::Int64=size(w,2)) where {T <: Prior, R <: Real}
+                        M::Int64=size(w,2)) where {T1 <: Prior, T2 <: Prior, R <: Real}
 
     @assert length(x) == N+M
     v = copy(x[1:N])
     h = copy(x[N+1:N+M])
 
     for n=1:N_iter
-        sample_cond!(w,v,P[1],x[N+1:N+M])
-        sample_cond!(w',h,P[N+1],v)
+        sample_cond!(w,v,Pv,x[N+1:N+M])
+        sample_cond!(w',h,Ph,v)
     end
 
     x[1:N] .= v
@@ -136,7 +136,7 @@ end
 
 #Bernoulli variables block
 
-function sample_cond(w::AbstractMatrix{R},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+function sample_cond(w::AbstractMatrix{R},P::Vector{BinaryPrior{R}},x2::Array{R,1}) where R <: Real
 
     v = zeros(size(w,1))
 
@@ -146,28 +146,29 @@ function sample_cond(w::AbstractMatrix{R},P::BinaryPrior,x2::Array{R,1}) where R
 
 end
 
-function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{BinaryPrior{R}},x2::Array{R,1}) where R <: Real
 
     sample_pot!(potential!(w,x1,P,x2),P)
 
 end
 
-function sample_pot!(x1::Array{R,1},P::BinaryPrior) where R <: Real
+function sample_pot!(x1::Array{R,1},P::Vector{BinaryPrior{R}}) where R <: Real
 
     bernoulli!(x1)
 
 end
 
-function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{BinaryPrior{R}},x2::Array{R,1}) where R <: Real
 
     input!(w,x1,P,x2)
     sigm!(x1)
 
 end
 
-function input!(w::AbstractMatrix{R},x1::Array{R,1},P::BinaryPrior,x2::Array{R,1}) where R <: Real
+function input!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{BinaryPrior{R}},x2::Array{R,1}) where R <: Real
 
-    θ_B = log((1-P.ρ)/(P.ρ))
+    θ_B = zeros(R,length(x1))
+    θ_B .= map(x->log((1-x.ρ)/(x.ρ)),P)
     mul!(x1,w,x2)
     x1 .+= θ_B
 
@@ -175,60 +176,75 @@ end
 
 # ReLU variables block
 
-function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::ReLUPrior,x2::Array{R,1}) where R <: Real
+function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{ReLUPrior{R}},x2::Array{R,1}) where R <: Real
 
     sample_pot!(potential!(w,x1,P,x2),P)
 
 end
 
-function sample_pot!(x1::Array{R,1},P::ReLUPrior) where R <: Real
+function sample_pot!(x1::Array{R,1},P::Vector{ReLUPrior{R}}) where R <: Real
 
     z = fill(-1.0,length(x1))
+    γ = zeros(R,length(x1))
+    γ .= map(x->x.γ,P)
 
     for i=1:length(x1)
         while z[i] < 0
             z[i] = randn()
+            z[i] /= sqrt(γ[i])
+            z[i] += x1[i]
         end
     end
 
-    z ./= sqrt(P.γ) 
-    z .+= x1
-    
+    x1 .= z
 
 end
 
-function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::ReLUPrior,x2::Array{R,1}) where R <: Real
+function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{ReLUPrior{R}},x2::Array{R,1}) where R <: Real
+
+    θ = zeros(R,length(x1))
+    γ = zeros(R,length(x1))
+
+    θ .= map(x->x.θ,P)
+    γ .= map(x->x.γ,P)
 
     mul!(x1,w,x2)
-    x1 .+= P.θ
-    x1 ./= P.γ
+    x1 .+= θ
+    x1 ./= γ
 
 end
 
 #Initialization of state
-function initialize_state(P0::Array{Q,1},N::Int,M::Int) where Q <: Prior
+function initialize_state(Pv::Vector{Q1},Ph::Vector{Q2},N::Int,M::Int) where {Q1 <: Prior, Q2 <: Prior}
 
     v = zeros(N)
     h = zeros(M)
-    init!(v,P0[1])
-    init!(h,P0[N+1])
+    init!(v,Pv)
+    init!(h,Ph)
 
     return vcat(v,h)
 
 end
 
-function init!(x::Array{T,1}, P::BinaryPrior) where T <: Real
+function init!(x::Array{T,1}, P::Vector{BinaryPrior{T}}) where T <: Real
 
-    θ_B = log((1-P.ρ)/(P.ρ))
+    θ_B = zeros(T,length(x))
+    θ_B .= map(x->log((1-x.ρ)/(x.ρ)),P)
+
     x .+= θ_B
     sigm!(x)
     bernoulli!(x)
 
 end
 
-function init!(x::Array{T,1}, P::ReLUPrior) where T <: Real
+function init!(x1::Array{T,1}, P::Vector{ReLUPrior{T}}) where T <: Real
 
     z = fill(-1.0,length(x1))
+    θ = zeros(T,length(x1))
+    γ = zeros(T,length(x1))
+
+    θ .= map(x->x.θ,P)
+    γ .= map(x->x.γ,P)
 
     for i=1:length(x1)
         while z[i] < 0
@@ -236,8 +252,10 @@ function init!(x::Array{T,1}, P::ReLUPrior) where T <: Real
         end
     end
 
-    z ./= sqrt(P.γ) 
-    z .+= P.θ/P.γ
+    z ./= sqrt.(γ) 
+    z .+= θ ./ γ
+
+    x1 .= z
     
 end
 

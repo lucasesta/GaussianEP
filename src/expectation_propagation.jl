@@ -212,7 +212,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
                      minvar::T = T(-1e50),
                      nprint::Int = 100,
                      inverter::Symbol = :block_inv,
-                     epsgrad::T = 1.0e-2) where {T <: Real, P <: Prior}
+                     epsgrad::T = T(1.0e-2)) where {T <: Real, P <: Prior}
     
     Ny,Nx = size(F)
     N = Nx + Ny
@@ -318,13 +318,13 @@ function block_inv(w::Matrix{T}, Bm1::Diagonal{T,Array{T,1}}, C::Diagonal{T,Arra
     return Σ
 end
 
-function min_diagel(w::Matrix{Float64}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {P1 <: Prior, P2 <: Prior}
+function min_diagel(w::Matrix{T}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {T <: Real, P1 <: Prior, P2 <: Prior}
 
     N = size(w,1)
     M = size(w,2)
 
-    c = zeros(Float64,N+M)
-    W = zeros(Float64,N,N)
+    c = zeros(T,N+M)
+    W = zeros(T,N,N)
     W = w*w'
 
     λ_max = eigmax(W)
@@ -334,13 +334,13 @@ function min_diagel(w::Matrix{Float64}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {
 
 end
 
-function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=5.0)
+function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=100.0) where T <: Real
 
     N = size(w,1)
     M = size(w,2)
 
     c = zeros(N+M)
-    W = zeros(Float64,N,N)
+    W = zeros(T,N,N)
     W = w*w'
 
     λ_max = eigmax(W)
@@ -355,13 +355,13 @@ function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Floa
 
 end
 
-function min_diagel(w::Matrix{Float64}, Pv::GaussianPrior, Ph::ReLUPrior; ϵ::Float64=0.5)
+function min_diagel(w::Matrix{T}, Pv::GaussianPrior, Ph::ReLUPrior; ϵ::Float64=0.5) where T <: Real
 
     N = size(w,1)
     M = size(w,2)
 
     c = zeros(N+M)
-    W = zeros(Float64,N,N)
+    W = zeros(T,N,N)
     W = w*w'
 
     λ_max = eigmax(W)

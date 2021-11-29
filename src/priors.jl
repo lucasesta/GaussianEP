@@ -241,7 +241,7 @@ function gradient(p0::BinaryPrior, μ, σ2)
     Z = p0.ρ * earg + (1-p0.ρ)
     ρ_old = p0.ρ
     if (isnan(Z) || isinf(Z))
-        println("Infinite Z\n")
+        #println("Infinite Z\n")
         Z = p0.ρ + (1-p0.ρ) / earg;
         if p0.δρ > 0
             p0.ρ += p0.δρ * (1 - 1 / earg) / Z;

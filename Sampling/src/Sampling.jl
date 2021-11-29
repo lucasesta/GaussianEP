@@ -14,7 +14,8 @@ module Sampling
 using Statistics
 using BenchmarkTools
 using LinearAlgebra
-using FastGaussQuadrature, ForwardDiff
+using Distributions
+#using FastGaussQuadrature, ForwardDiff
 
 include("priors.jl")
 include("mc_sampling.jl")

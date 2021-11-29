@@ -189,11 +189,13 @@ function sample_pot!(x1::Array{R,1},P::Vector{ReLUPrior{R}}) where R <: Real
     γ .= map(x->x.γ,P)
 
     for i=1:length(x1)
-        while z[i] < 0
-            z[i] = randn()
-            z[i] /= sqrt(γ[i])
-            z[i] += x1[i]
-        end
+        dist = TruncatedNormal(x1[i],sqrt(1/γ[i]),0.0,Inf)
+        z[i] = rand(dist)
+        # while z[i] < 0
+        #     z[i] = randn()
+        #     z[i] /= sqrt(γ[i])
+        #     z[i] += x1[i]
+        # end
     end
 
     x1 .= z

@@ -345,7 +345,7 @@ function ep_dyn_damp(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P};
 
     for iter = 1:maxiter
         if iter > t_shift && damp <= 0.9995
-            damp = ( ((iter-t_shift)/tau)^2 + d_start )/( 1.0 + ((iter-t_shift)/tau)^2 )
+            damp = ( ((iter-t_shift)/tau) + d_start )/( 1.0 + ((iter-t_shift)/tau) )
         end
         epsconv = tol_fact * (1.0 - damp)
         sum!(A,y,H)

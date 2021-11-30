@@ -301,6 +301,118 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
     return EPOut(state, :unconverged), fail, maxiter
 end
 
+#EP with dynamical damping
+
+function ep_dyn_damp(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P}; 
+                     F::AbstractMatrix{T} = zeros(T,0,length(P0)),
+                     d::AbstractVector{T} = zeros(T,size(F,1)),
+                     maxiter::Int = 2000,
+                     callback = (x...)->nothing,
+                     state::Union{EPState{T},Nothing} = nothing,
+                     damp::T = T(0.9),
+                     tol_fact::T = 0.01,
+                     #epsconv::T = 1.0e-2 * (1.0 - damp),
+                     maxvar::T = T(1e50),
+                     minvar::T = T(-1e50),
+                     nprint::Int = 100,
+                     inverter::Symbol = :block_inv,
+                     epsgrad::T = T(1.0e-2),
+                     tau::T = 1000.0,
+                     t_shift::T = 2000.0) where {T <: Real, P <: Prior}
+    
+    Ny,Nx = size(F)
+    N = Nx + Ny
+    @assert size(P0,1) == N
+    Fp = copy(F')
+    Nv, Nh = size(H[1].w)
+    @assert Nv+Nh == Nx
+    
+    flag = 0
+    c = if state === nothing
+        state = EPState{T}(sum(size(F)), size(F)[2])
+        flag = 1
+        min_diagel(H[1].w,P0[1],P0[Nv+1]) 
+    end
+
+    @extract state A y Σ v av va a μ b s
+
+    if flag == 1
+        b .= 1 ./ c
+    end
+
+    fail = 0
+    d_start = damp
+
+    for iter = 1:maxiter
+        if iter > t_shift && damp <= 0.9995
+            damp = ( ((iter-t_shift)/tau)^2 + d_start )/( 1.0 + ((iter-t_shift)/tau)^2 )
+        end
+        epsconv = tol_fact * (1.0 - damp)
+        sum!(A,y,H)
+        Δgrad, Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0, 0.0
+        _, C = Diagonal(1 ./b[1:Nv]), Diagonal(1 ./ b[Nv+1:Nx])
+        Bm1 = Diagonal(b[1:Nv])
+        if inverter == :block_inv
+            Σ .= block_inv(A[1:Nv,Nv+1:Nx],Bm1,C)
+        else
+            A .+= Diagonal(1 ./ b[1:Nx]) .+ Fp * (Diagonal(1 ./ b[Nx+1:end]) * F)
+            Σ = inv(Symmetric(A))
+            @assert isposdef(Σ)
+        end
+        ax, bx, ay, by = (@view a[1:Nx]), (@view b[1:Nx]), (@view a[Nx+1:end]), (@view b[Nx+1:end])
+        v .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
+        
+        for i in 1:N
+            if i <= Nx
+                ss = clamp(Σ[i,i], minvar, maxvar)
+                vv = v[i]
+            else
+                ss = clamp(dot(F[i-Nx,:], Σ*Fp[:,i-Nx]), minvar, maxvar)
+                vv = dot(Fp[:,i-Nx], v) + d[i-Nx]
+            end
+            Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
+            Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
+            tav, tva = try
+                moments(P0[i], μ[i], s[i])
+            catch err
+                if isa(err,DomainError)
+                    println("combined variance must be positive")
+                    fail = 1
+                    return EPOut(state, :unconverged), fail, iter
+                end
+            end
+            #tav, tva = moments(P0[i], μ[i], s[i])
+            Δav = max(Δav, update_err!(av, i, tav))
+            Δva = max(Δva, update_err!(va, i, tva))
+            (isnan(av[i]) || isnan(va[i])) && @warn "avnew = $(av[i]) varnew = $(va[i])"
+
+            new_b = clamp(1/(1/va[i] - 1/s[i]), minvar, maxvar)
+            new_a = av[i] + new_b * (av[i] - μ[i])/s[i]
+            a[i] = damp * a[i] + (1 - damp) * new_a
+            b[i] = damp * b[i] + (1 - damp) * new_b
+        end
+
+        # learn prior's params
+        for i in 1:Nv+Nh
+            Δgrad = max(Δgrad,gradient(P0[i], μ[i], s[i]));
+        end
+        # learn β params
+        # for i in 1:length(H)
+        #     updateβ(H[i], av[1:Nx])
+        # end
+        ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H)
+        if mod(iter, nprint) == 0
+            println("damp=$damp, epsconv=$epsconv")
+            println("it: ", iter, " Δav: ", Δav, " Δgrad: ", Δgrad)
+        end
+        if ret === true || (Δav < epsconv && norm(F*av[1:Nx]+d-av[Nx+1:end]) < 1e-4 && Δgrad < epsgrad)
+            #println("it: ", iter, " Δav: ", Δav)
+            return EPOut(state, :converged), fail, iter
+        end
+    end
+    return EPOut(state, :unconverged), fail, maxiter
+end
+
 function block_inv(w::Matrix{T}, Bm1::Diagonal{T,Array{T,1}}, C::Diagonal{T,Array{T,1}}) where {T <: AbstractFloat}
 
     @assert size(w,1) == size(Bm1,1) && size(w,2) == size(C,1)
@@ -334,7 +446,7 @@ function min_diagel(w::Matrix{T}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {T <: R
 
 end
 
-function min_diagel(w::Matrix{Float64}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=100.0) where T <: Real
+function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=100.0) where T <: Real
 
     N = size(w,1)
     M = size(w,2)

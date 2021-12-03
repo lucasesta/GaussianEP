@@ -119,12 +119,31 @@ function pot(x, P::Vector{ReLUPrior{T}}) where T <: Real
 
 end
 
-"""
+function pot(x, P::Vector{SpikeSlabPrior{T}}) where T <: Real
 
-    Functions defining different potential energies
-    according to the prior
+    L = length(x)
+    ρ = zeros(L)
+    λ = zeros(L)
+    e = 0.0
 
-"""
+    ρ = map(x->x.ρ,P)
+    λ = map(x->x.λ,P)
+
+    for l=1:L
+        if x == 0.0
+            e -= log(1-ρ[l])
+        else
+            e += -log(ρ[l]) + 0.5 * λ[l] * x[l] * x[l] + 0.5 * log(2 * π / λ[l])
+        end
+    end
+
+    return e
+
+end
+
+
+# Functions defining different potential energies
+# according to the prior
 
 function Pot(P::GaussianPrior,x::Float64)
     u_pot = 0.5*(x-P.μ)*(x-P.μ)*P.β

@@ -138,11 +138,11 @@ end
 
 function sample_cond(w::AbstractMatrix{R},P::Vector{BinaryPrior{R}},x2::Array{R,1}) where R <: Real
 
-    v = zeros(size(w,1))
+    x = zeros(size(w,1))
 
-    sample_pot!(potential!(w,v,P,x2),P)
+    sample_pot!(potential!(w,x,P,x2),P)
 
-    return v
+    return x
 
 end
 
@@ -216,6 +216,50 @@ function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{ReLUPrior{R}},
 
 end
 
+# Spike and Slab variables block
+
+function sample_cond!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{SpikeSlabPrior{R}},x2::Array{R,1}) where R <: Real
+
+    sample_pot!(potential!(w,x1,P,x2),P)
+
+end
+
+function sample_pot!(x1::Array{R,1},P::Vector{SpikeSlabPrior{R}}) where R <: Real
+
+    z = zeros(R,length(x1))
+    λ = zeros(R,length(x1))
+    ρ = zeros(R,length(x1))
+    r = 0.0
+
+    λ .= map(x->x.λ,P)
+    ρ .= map(x->x.ρ,P)
+    
+
+    for i=1:length(x1)
+        r = rand()
+        if r <= 1 - ρ[i]
+            z[i] = 0.0
+        else
+            z[i] = randn()
+            z[i] /= sqrt(λ[i])
+            z[i] += x1[i]
+        end
+    end
+
+    x1 .= z
+
+end
+
+function potential!(w::AbstractMatrix{R},x1::Array{R,1},P::Vector{SpikeSlabPrior{R}},x2::Array{R,1}) where R <: Real
+
+    λ = zeros(R,length(x1))
+    λ .= map(x->x.λ,P)
+
+    mul!(x1,w,x2)
+    x1 ./= λ
+
+end
+
 #Initialization of state
 function initialize_state(Pv::Vector{Q1},Ph::Vector{Q2},N::Int,M::Int) where {Q1 <: Prior, Q2 <: Prior}
 
@@ -256,6 +300,31 @@ function init!(x1::Array{T,1}, P::Vector{ReLUPrior{T}}) where T <: Real
 
     z ./= sqrt.(γ) 
     z .+= θ ./ γ
+
+    x1 .= z
+    
+end
+
+function init!(x1::Array{T,1}, P::Vector{SpikeSlabPrior{T}}) where T <: Real
+
+    z = zeros(T,length(x1))
+    λ = zeros(T,length(x1))
+    ρ = zeros(T,length(x1))
+    r = 0.0
+
+    λ .= map(x->x.λ,P)
+    ρ .= map(x->x.ρ,P)
+    
+
+    for i=1:length(x1)
+        r = rand()
+        if r <= 1 - ρ[i]
+            z[i] = 0.0
+        else
+            z[i] = randn()
+            z[i] /= sqrt(λ[i])
+        end
+    end
 
     x1 .= z
     

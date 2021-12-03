@@ -318,7 +318,7 @@ function ep_dyn_damp(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P};
                      inverter::Symbol = :block_inv,
                      epsgrad::T = T(1.0e-2),
                      tau::T = 1000.0,
-                     t_shift::T = 2000.0) where {T <: Real, P <: Prior}
+                     t_shift::T = 500.0) where {T <: Real, P <: Prior}
     
     Ny,Nx = size(F)
     N = Nx + Ny
@@ -447,6 +447,27 @@ function min_diagel(w::Matrix{T}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {T <: R
 end
 
 function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=100.0) where T <: Real
+
+    N = size(w,1)
+    M = size(w,2)
+
+    c = zeros(N+M)
+    W = zeros(T,N,N)
+    W = w*w'
+
+    λ_max = eigmax(W)
+
+    b = 1 / (Pv.ρ * (1 - Pv.ρ))
+    d = λ_max / b
+
+    c[1:N] .= b
+    c[N+1:N+M] .= d+ϵ
+
+    return c
+
+end
+
+function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::SpikeSlabPrior; ϵ::Float64=0.5) where T <: Real
 
     N = size(w,1)
     M = size(w,2)

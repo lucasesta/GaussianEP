@@ -1,4 +1,3 @@
-using Random, LinearAlgebra, ExtractMacro
 
 ```@meta
 CurrentModule = GaussianEP
@@ -14,18 +13,21 @@ end
     Instantaneous state of an expectation propagation run.
 """
 struct EPState{T<:AbstractFloat}
-    A::Matrix{T}
-    y::Vector{T}
-    Σ::Matrix{T}
-    v::Vector{T}
-    av::Vector{T}
-    va::Vector{T}
-    a::Vector{T}
-    μ::Vector{T}
-    b::Vector{T}
-    s::Vector{T}
+    A::Matrix{T} # precision matrix full Gaussian
+    y::Vector{T} # field full Gaussian
+    Σ::Matrix{T} # cov matrix full Gaussian
+    μ::Vector{T} # mean vector full Gaussian
+    a::Vector{T} # mean vector univ. Gaussian
+    b::Vector{T} # variance vector univ. Gaussian
+    av::Vector{T} # mean tilted distr.
+    va::Vector{T} # var tilted distr.
+    av_cav::Vector{T} # cav av
+    va_cav::Vector{T} # cav va
 end
-EPState{T}(N, Nx = N) where {T <: AbstractFloat} = EPState{T}(Matrix{T}(undef,Nx,Nx), zeros(T,Nx), Matrix{T}(undef,Nx,Nx), zeros(T,Nx),zeros(T,N), zeros(T,N), zeros(T,N), zeros(T,N), ones(T,N), ones(T,N))
+
+EPState{T}(N, Nx = N) where {T <: AbstractFloat} = EPState{T}(Matrix{T}(undef,Nx,Nx),
+                        zeros(T,Nx), Matrix{T}(undef,Nx,Nx), zeros(T,Nx),zeros(T,N), 
+                        zeros(T,N), zeros(T,N), zeros(T,N), ones(T,N), ones(T,N))
 
 """
 Output of EP algorithm
@@ -41,7 +43,7 @@ mutable struct EPOut{T<:AbstractFloat}
 end
 function EPOut(s, converged::Symbol) where {T <: AbstractFloat}
     converged ∈ (:converged,:unconverged) || error("$converged is not a valid symbol")
-    return EPOut(s.av,s.va, s.μ,s.s,converged,s)
+    return EPOut(s.av, s.va, s.av_cav, s.va_cav, converged, s)
 end
 
 """
@@ -106,49 +108,52 @@ function expectation_propagation(H::AbstractVector{Term{T}}, P0::AbstractVector{
                      maxvar::T = T(1e50),
                      minvar::T = T(1e-50),
                      inverter = inv) where {T <: Real, P <: Prior}
-    @extract state A y Σ v av va a μ b s
+
+
+    @extract state A y Σ av va a μ b av_cav va_cav
     Ny,Nx = size(F)
     N = Nx + Ny
     @assert size(P0,1) == N
     Fp = copy(F')
+
     for iter = 1:maxiter
         sum!(A,y,H)
-        Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0
+        Δav_cav, Δva_cav, Δav, Δva = 0.0, 0.0, 0.0, 0.0
         A .+= Diagonal(1 ./ b[1:Nx]) .+ Fp * (Diagonal(1 ./ b[Nx+1:end]) * F)
         Σ .= inverter(A)
         ax, bx, ay, by = (@view a[1:Nx]), (@view b[1:Nx]), (@view a[Nx+1:end]), (@view b[Nx+1:end])
-        v .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
+        μ .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
         for i in 1:N
             if i <= Nx
                 ss = clamp(Σ[i,i], minvar, maxvar)
-                vv = v[i]
+                vv = μ[i]
             else
                 ss = clamp(dot(F[i-Nx,:], Σ*Fp[:,i-Nx]), minvar, maxvar)
-                vv = dot(Fp[:,i-Nx], v) + d[i-Nx]
+                vv = dot(Fp[:,i-Nx], μ) + d[i-Nx]
             end
 
             if ss < b[i]
-                Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
-                Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
+                Δva_cav = max(Δva_cav, update_err!(va_cav, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
+                Δav_cav = max(Δav_cav, update_err!(av_cav, i, va_cav[i] * (vv/ss - a[i]/b[i])))
             else
                 ss == b[i] && @warn "infinite var, ss = $ss"
-                Δs = max(Δs, update_err!(s, i, maxvar))
-                Δμ = max(Δμ, update_err!(μ, i, 0))
+                Δva_cav = max(Δva_cav, update_err!(va_cav, i, maxvar))
+                Δav_cav = max(Δav_cav, update_err!(av_cav, i, 0))
             end
-            tav, tva = moments(P0[i], μ[i], sqrt(s[i]));
+            tav, tva = moments(P0[i], av_cav[i], va_cav[i]);
             Δav = max(Δav, update_err!(av, i, tav))
             Δva = max(Δva, update_err!(va, i, tva))
             (isnan(av[i]) || isnan(va[i])) && @warn "avnew = $(av[i]) varnew = $(va[i])"
 
-            new_b = clamp(1/(1/va[i] - 1/s[i]), minvar, maxvar)
-            new_a = av[i] + new_b * (av[i] - μ[i])/s[i]
+            new_b = clamp(1/(1/va[i] - 1/va_cav[i]), minvar, maxvar)
+            new_a = av[i] + new_b * (av[i] - av_cav[i])/va_cav[i]
             a[i] = damp * a[i] + (1 - damp) * new_a
             b[i] = damp * b[i] + (1 - damp) * new_b
         end
 
         # learn prior's params
         for i in randperm(N)
-            gradient(P0[i], μ[i], sqrt(s[i]));
+            gradient(P0[i], av_cav[i], va_cav[i]);
         end
         # learn β params
         for i in 1:length(H)
@@ -228,7 +233,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
         min_diagel(H[1].w,P0[1],P0[Nv+1]) 
     end
 
-    @extract state A y Σ v av va a μ b s
+    @extract state A y Σ av va a μ b av_cav va_cav
 
     if flag == 1
         b .= 1 ./ c
@@ -238,7 +243,7 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
 
     for iter = 1:maxiter
         sum!(A,y,H)
-        Δgrad, Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0, 0.0
+        Δgrad, Δav_cav, Δva_cav, Δav, Δva = 0.0, 0.0, 0.0, 0.0, 0.0
         _, C = Diagonal(1 ./b[1:Nv]), Diagonal(1 ./ b[Nv+1:Nx])
         Bm1 = Diagonal(b[1:Nv])
         if inverter == :block_inv
@@ -249,20 +254,20 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
             @assert isposdef(Σ)
         end
         ax, bx, ay, by = (@view a[1:Nx]), (@view b[1:Nx]), (@view a[Nx+1:end]), (@view b[Nx+1:end])
-        v .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
+        μ .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
         
         for i in 1:N
             if i <= Nx
                 ss = clamp(Σ[i,i], minvar, maxvar)
-                vv = v[i]
+                vv = μ[i]
             else
                 ss = clamp(dot(F[i-Nx,:], Σ*Fp[:,i-Nx]), minvar, maxvar)
-                vv = dot(Fp[:,i-Nx], v) + d[i-Nx]
+                vv = dot(Fp[:,i-Nx], μ) + d[i-Nx]
             end
-            Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
-            Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
+            Δva_cav = max(Δva_cav, update_err!(va_cav, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
+            Δav_cav = max(Δav_cav, update_err!(av_cav, i, va_cav[i] * (vv/ss - a[i]/b[i])))
             tav, tva = try
-                moments(P0[i], μ[i], s[i])
+                moments(P0[i], av_cav[i], va_cav[i])
             catch err
                 if isa(err,DomainError)
                     println("combined variance must be positive")
@@ -275,15 +280,15 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
             Δva = max(Δva, update_err!(va, i, tva))
             (isnan(av[i]) || isnan(va[i])) && @warn "avnew = $(av[i]) varnew = $(va[i])"
 
-            new_b = clamp(1/(1/va[i] - 1/s[i]), minvar, maxvar)
-            new_a = av[i] + new_b * (av[i] - μ[i])/s[i]
+            new_b = clamp(1/(1/va[i] - 1/va_cav[i]), minvar, maxvar)
+            new_a = av[i] + new_b * (av[i] - av_cav[i])/va_cav[i]
             a[i] = damp * a[i] + (1 - damp) * new_a
             b[i] = damp * b[i] + (1 - damp) * new_b
         end
 
         # learn prior's params
         for i in 1:Nv+Nh
-            Δgrad = max(Δgrad,gradient(P0[i], μ[i], s[i]));
+            Δgrad = max(Δgrad,gradient(P0[i], av_cav[i], va_cav[i]));
         end
         # learn β params
         # for i in 1:length(H)
@@ -300,6 +305,164 @@ function expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVect
     end
     return EPOut(state, :unconverged), fail, maxiter
 end
+
+
+function block_expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P}; 
+                     d::AbstractVector{T} = zeros(T,size(P0,1)),
+                     maxiter::Int = 2000,
+                     callback = (x...)->nothing,
+                     vstate::Union{EPState{T},Nothing} = nothing,
+                     hstate::Union{EPState{T},Nothing} = nothing,
+                     damp::T = T(0.9),
+                     epsconv::T = 1.0e-2 * (1.0 - damp),
+                     maxvar::T = T(1e50),
+                     minvar::T = T(-1e50),
+                     nprint::Int = 100,
+                     inverter::Function = inplaceinverse!,
+                     epsgrad::T = T(1.0e-2)) where {T <: Real, P <: Prior}
+    
+    Nv, Nh = size(H[1].w)
+    N = size(P0,1)
+    @assert Nv+Nh == N
+    
+    W = H[1].w
+    Wt = H[1].w'
+    flag = 0
+    c = if vstate === nothing
+        flag = 1
+        min_diagel(H[1].w,P0[1],P0[Nv+1]) 
+    end
+
+    Avh = zeros(Nv+Nh, Nv+Nh)
+    Avh[1:Nv,Nv+1:end] .= -W
+    Avh[Nv+1:end,1:Nv] .= -Wt
+
+    if vstate == nothing
+        vstate = EPState{T}(zeros(Nv,Nv), zeros(Nv), Matrix{T}(I,Nv,Nv), 
+                            zeros(Nv), zeros(Nv), ones(Nv), zeros(Nv), 
+                            zeros(Nv), zeros(Nv), ones(Nv))
+    end
+    if hstate == nothing
+        hstate = EPState{T}(zeros(Nh,Nh), zeros(Nh), Matrix{T}(I,Nh,Nh), 
+                            zeros(Nh), zeros(Nh), ones(Nh), zeros(Nh), 
+                            zeros(Nh), zeros(Nh), ones(Nh))
+    end
+
+    Av, yv, Σv, μv, av, bv, avv, vav, av_cavv, va_cavv = vstate.A, vstate.y, vstate.Σ, vstate.μ, 
+                                                vstate.a, vstate.b, vstate.av, vstate.va,
+                                                vstate.av_cav, vstate.va_cav
+    Ah, yh, Σh, μh, ah, bh, avh, vah, av_cavh, va_cavh = hstate.A, hstate.y, hstate.Σ, hstate.μ,
+                                                hstate.a, hstate.b, hstate.av, hstate.va,
+                                                hstate.av_cav, hstate.va_cav
+
+
+    if flag == 1
+        bv .= 1.0 ./ c[1:Nv]
+        bh .= 1.0 ./ c[Nv+1:end]
+        Dv, Dh = Diagonal(1 ./bv), Diagonal(1 ./ bh)
+        Dv1, Dh1 = Diagonal(bv), Diagonal(bh)
+    end
+
+    fail = 0
+    for iter = 1:maxiter
+        Δgrad, Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0, 0.0
+        
+        Av .= Dv - W * Dh1 * Wt
+        yv .= Dv * av + W*ah
+        #Σv .= inverter(Σv, Av)
+        Σv .= inv(Av)
+        μv .= Av \ yv
+
+        
+        for i in 1:Nv
+
+            ss = clamp(Σv[i,i], minvar, maxvar)
+            vv = μv[i]
+            va_cavv[i] = clamp(1.0/(1.0/ss - 1.0/bv[i]), minvar, maxvar)
+            av_cavv[i] = va_cavv[i] * (vv/ss - av[i]/bv[i])
+            tav, tva = try
+                moments(P0[i], av_cavv[i], va_cavv[i])
+            catch err
+                if isa(err,DomainError)
+                    println("combined variance must be positive")
+                    fail = 1
+
+                    Avh[Nv+1:end,Nv+1:end] += Diagonal(1.0 ./bh)
+                    Avh[1:Nv,1:Nv] += Diagonal(1.0 ./bv)
+
+                    return vstate, hstate, inv(Avh) ,fail, iter 
+                end
+            end
+            Δav = max(Δav, update_err!(avv, i, tav))
+            Δva = max(Δva, update_err!(vav, i, tva))
+            (isnan(avv[i]) || isnan(vav[i])) && @warn "avnew = $(avv[i]) varnew = $(vav[i])"
+            new_b = clamp(1/(1/vav[i] - 1/va_cavv[i]), minvar, maxvar)
+            new_a = avv[i] + new_b * (avv[i] - av_cavv[i])/va_cavv[i]
+            av[i] = damp * av[i] + (1 - damp) * new_a
+            bv[i] = damp * bv[i] + (1 - damp) * new_b
+            Dv[i,i] = 1/bv[i]
+            Dv1[i,i] = bv[i]
+        end
+
+        Ah .= Dh - Wt * Dv1 * W
+        yh .= Dh * ah + Wt * av
+        #Σh .= inverter(Σh, Ah)
+        Σh .= inv(Ah)
+        μh .= Ah \ yh
+        
+        for i in 1:Nh
+            ss = clamp(Σh[i,i], minvar, maxvar)
+            vv = μh[i]
+            va_cavh[i] = clamp(1/(1/ss - 1/bh[i]), minvar, maxvar)
+            av_cavh[i] = va_cavh[i] * (vv/ss - ah[i]/bh[i])
+
+            tav, tva = try
+                moments(P0[i+Nv], av_cavh[i], va_cavh[i])
+            catch err
+                if isa(err,DomainError)
+                    println("combined variance must be positive")
+                    fail = 1
+                    Avh[Nv+1:end,Nv+1:end] += Dh
+                    Avh[1:Nv,1:Nv] += Dv
+                    return vstate, hstate, inv(Avh), fail, iter 
+                end
+            end
+            Δav = max(Δav, update_err!(avh, i, tav))
+            Δva = max(Δva, update_err!(vah, i, tva))
+            (isnan(avh[i]) || isnan(vah[i])) && @warn "avnew = $(avh[i]) varnew = $(vah[i])"
+            new_b = clamp(1/(1/vah[i] - 1/va_cavh[i]), minvar, maxvar)
+            new_a = avh[i] + new_b * (avh[i] - av_cavh[i])/va_cavh[i]
+            ah[i] = damp * ah[i] + (1 - damp) * new_a
+            bh[i] = damp * bh[i] + (1 - damp) * new_b
+            Dh[i,i] = 1/bh[i]
+            Dh1[i,i] = bh[i]
+
+        end
+
+        # learn prior's params
+        for i in 1:Nv
+            Δgrad = max(Δgrad,gradient(P0[i], av_cavv[i], va_cavv[i]));
+        end
+        for i in 1:Nh
+            Δgrad = max(Δgrad,gradient(P0[i+Nv], av_cavh[i], va_cavv[i]));
+        end
+        #ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H)
+        if mod(iter, nprint) == 0
+            println("it: ", iter, " Δav: ", Δav, " Δgrad: ", Δgrad)
+        end
+        if Δav < epsconv && Δgrad < epsgrad
+            Avh[Nv+1:end,Nv+1:end] += Dh
+            Avh[1:Nv,1:Nv] += Dv
+            return vstate, hstate, inv(Avh), fail, iter
+        end
+    end
+
+    Avh[Nv+1:end,Nv+1:end] += Dh
+    Avh[1:Nv,1:Nv] += Dv
+    return vstate, hstate, inv(Avh), fail, maxiter
+end
+
+
 
 #EP with dynamical damping
 
@@ -334,7 +497,7 @@ function ep_dyn_damp(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P};
         min_diagel(H[1].w,P0[1],P0[Nv+1]) 
     end
 
-    @extract state A y Σ v av va a μ b s
+    @extract state A y Σ av va a μ b av_cav va_cav
 
     if flag == 1
         b .= 1 ./ c
@@ -349,7 +512,7 @@ function ep_dyn_damp(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P};
         end
         epsconv = tol_fact * (1.0 - damp)
         sum!(A,y,H)
-        Δgrad, Δμ, Δs, Δav, Δva = 0.0, 0.0, 0.0, 0.0, 0.0
+        Δgrad, Δav_cav, Δva_cav, Δav, Δva = 0.0, 0.0, 0.0, 0.0, 0.0
         _, C = Diagonal(1 ./b[1:Nv]), Diagonal(1 ./ b[Nv+1:Nx])
         Bm1 = Diagonal(b[1:Nv])
         if inverter == :block_inv
@@ -360,20 +523,20 @@ function ep_dyn_damp(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P};
             @assert isposdef(Σ)
         end
         ax, bx, ay, by = (@view a[1:Nx]), (@view b[1:Nx]), (@view a[Nx+1:end]), (@view b[Nx+1:end])
-        v .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
+        μ .= Σ * (y .+ ax ./ bx .+ (Fp * ((ay-d) ./ by)))
         
         for i in 1:N
             if i <= Nx
                 ss = clamp(Σ[i,i], minvar, maxvar)
-                vv = v[i]
+                vv = μ[i]
             else
                 ss = clamp(dot(F[i-Nx,:], Σ*Fp[:,i-Nx]), minvar, maxvar)
-                vv = dot(Fp[:,i-Nx], v) + d[i-Nx]
+                vv = dot(Fp[:,i-Nx],μ) + d[i-Nx]
             end
-            Δs = max(Δs, update_err!(s, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
-            Δμ = max(Δμ, update_err!(μ, i, s[i] * (vv/ss - a[i]/b[i])))
+            Δva_cav = max(Δva_cav, update_err!(va_cav, i, clamp(1/(1/ss - 1/b[i]), minvar, maxvar)))
+            Δav_cav = max(Δav_cav, update_err!(av_cav, i, va_cav[i] * (vv/ss - a[i]/b[i])))
             tav, tva = try
-                moments(P0[i], μ[i], s[i])
+                moments(P0[i], av_cav[i], va_cav[i])
             catch err
                 if isa(err,DomainError)
                     println("combined variance must be positive")
@@ -386,15 +549,15 @@ function ep_dyn_damp(H::AbstractVector{TermRBM{T}}, P0::AbstractVector{P};
             Δva = max(Δva, update_err!(va, i, tva))
             (isnan(av[i]) || isnan(va[i])) && @warn "avnew = $(av[i]) varnew = $(va[i])"
 
-            new_b = clamp(1/(1/va[i] - 1/s[i]), minvar, maxvar)
-            new_a = av[i] + new_b * (av[i] - μ[i])/s[i]
+            new_b = clamp(1/(1/va[i] - 1/va_cav[i]), minvar, maxvar)
+            new_a = av[i] + new_b * (av[i] - av_cav[i])/va_cav[i]
             a[i] = damp * a[i] + (1 - damp) * new_a
             b[i] = damp * b[i] + (1 - damp) * new_b
         end
 
         # learn prior's params
         for i in 1:Nv+Nh
-            Δgrad = max(Δgrad,gradient(P0[i], μ[i], s[i]));
+            Δgrad = max(Δgrad,gradient(P0[i], av_cav[i], va_cav[i]));
         end
         # learn β params
         # for i in 1:length(H)
@@ -507,4 +670,10 @@ function min_diagel(w::Matrix{T}, Pv::GaussianPrior, Ph::ReLUPrior; ϵ::Float64=
 
     return c
 
+end
+
+function inplaceinverse!(dest,source)
+    copy!(dest, source)
+    println(isposdef(source), " ", rank(source))
+    LinearAlgebra.inv!(cholesky!(dest))
 end

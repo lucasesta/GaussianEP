@@ -108,29 +108,31 @@ function gibbssampling(x::Array{Float64,1},w::Matrix{R},Pv::Vector{T1},Ph::Vecto
                         N::Int64=size(w,1),
                         M::Int64=size(w,2)) where {T1 <: Prior, T2 <: Prior, R <: Real}
 
-    gibbssampling!(x,w,Pv,Ph,N_iter)
+    gibbssampling!(x[1:N],x[N+1:end],w,Pv,Ph,N_iter)
 
     return x
 
 end
 
-function gibbssampling!(x::Array{Float64,1},w::Matrix{R},Pv::Vector{T1},Ph::Vector{T2},N_iter::Int64;
+
+function gibbssampling!(v::Array{Float64,1},h::Array{Float64,1},w::Matrix{R},Pv::Vector{T1},Ph::Vector{T2},N_iter::Int64;
                         N::Int64=size(w,1),
                         M::Int64=size(w,2)) where {T1 <: Prior, T2 <: Prior, R <: Real}
 
-    @assert length(x) == N+M
-    v = copy(x[1:N])
-    h = copy(x[N+1:N+M])
+    
+    #@assert length(x) == N+M
+    #v = copy(x[1:N])
+    #h = copy(x[N+1:N+M])
 
     for n=1:N_iter
-        sample_cond!(w,v,Pv,x[N+1:N+M])
+        sample_cond!(w,v,Pv,h)
         sample_cond!(w',h,Ph,v)
     end
 
-    x[1:N] .= v
-    x[N+1:N+M] .= h
+    #x[1:N] .= v
+    #x[N+1:N+M] .= h
 
-    return
+    return cat(v,h)
 
 end
 

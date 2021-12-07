@@ -108,7 +108,7 @@ function gibbssampling(x::Array{Float64,1},w::Matrix{R},Pv::Vector{T1},Ph::Vecto
                         N::Int64=size(w,1),
                         M::Int64=size(w,2)) where {T1 <: Prior, T2 <: Prior, R <: Real}
 
-    gibbssampling!(x[1:N],x[N+1:end],w,Pv,Ph,N_iter)
+    x = gibbssampling!(x[1:N],x[N+1:end],w,Pv,Ph,N_iter)
 
     return x
 
@@ -129,10 +129,10 @@ function gibbssampling!(v::Array{Float64,1},h::Array{Float64,1},w::Matrix{R},Pv:
         sample_cond!(w',h,Ph,v)
     end
 
-    #x[1:N] .= v
-    #x[N+1:N+M] .= h
+    # x[1:N] .= v
+    # x[N+1:N+M] .= h
 
-    return cat(v,h)
+    return vcat(v,h)
 
 end
 

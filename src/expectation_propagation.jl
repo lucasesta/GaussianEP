@@ -359,12 +359,10 @@ function block_expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::Abstra
     if flag == 1
         bv .= 1.0 ./ c[1:Nv]
         bh .= 1.0 ./ c[Nv+1:end]
-        Dv, Dh = Diagonal(1 ./bv), Diagonal(1 ./ bh)
-        Dv1, Dh1 = Diagonal(bv), Diagonal(bh)
-    else
-        Dv, Dh = Diagonal(1 ./bv), Diagonal(1 ./ bh)
-        Dv1, Dh1 = Diagonal(bv), Diagonal(bh)
     end
+
+    Dv, Dh = Diagonal(1 ./bv), Diagonal(1 ./ bh)
+    Dv1, Dh1 = Diagonal(bv), Diagonal(bh)
 
     fail = 0
     for iter = 1:maxiter

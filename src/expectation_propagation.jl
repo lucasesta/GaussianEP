@@ -361,6 +361,9 @@ function block_expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::Abstra
         bh .= 1.0 ./ c[Nv+1:end]
         Dv, Dh = Diagonal(1 ./bv), Diagonal(1 ./ bh)
         Dv1, Dh1 = Diagonal(bv), Diagonal(bh)
+    else
+        Dv, Dh = Diagonal(1 ./bv), Diagonal(1 ./ bh)
+        Dv1, Dh1 = Diagonal(bv), Diagonal(bh)
     end
 
     fail = 0
@@ -609,7 +612,7 @@ function min_diagel(w::Matrix{T}, Pv::P1, Ph::P2; ϵ::Float64=0.5) where {T <: R
 
 end
 
-function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=100.0) where T <: Real
+function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=0.5) where T <: Real
 
     N = size(w,1)
     M = size(w,2)
@@ -630,7 +633,7 @@ function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::ReLUPrior; ϵ::Float64=10
 
 end
 
-function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::SpikeSlabPrior; ϵ::Float64=0.5) where T <: Real
+function min_diagel(w::Matrix{T}, Pv::BinaryPrior, Ph::SpikeSlabPrior; ϵ::Float64=10.0) where T <: Real
 
     N = size(w,1)
     M = size(w,2)

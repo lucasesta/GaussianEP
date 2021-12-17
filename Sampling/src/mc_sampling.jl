@@ -11,7 +11,8 @@ end
 function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
                         N::Int64=size(w,1),
                         M::Int64=size(w,2),
-                        N_iter=100000,
+                        N_samp::Int64=100000,
+                        tau::Int64=1,
                         x_init::Array{Float64,1}=zeros(Float64,N+M)) where {T <: Prior, R <: Real}
 
     x = copy(x_init)
@@ -40,18 +41,15 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
             if k>N && P[k]==ReLUPrior{R} && x[k]<0
                 println("Not accessible region")
             end
-
-            #a_cum += a
         
         end
-        #a_cum /= (N+M)
+
         iter = iter + 1
     end
 
-    #E = zeros(N_iter,)
-    #a_cum = zeros(N_iter,)
-    samples = zeros(N_iter, N+M)
-    #vh = zeros(N_iter, N , M)
+    samples = zeros(N_samp, N+M)
+    counter = 0
+    N_iter = N_samp*tau
 
     for iter=1:N_iter
 
@@ -76,27 +74,14 @@ function MC_sim(w::Matrix{R},P::Array{T,1}, t_wait::Int64, Δ::R;
             if k>N && P[k]==ReLUPrior{R} && x[k]<0
                 println("Not accessible region")
             end
-
-            #a_cum[iter] += a
         
         end
 
-        #a_cum[iter] /= (N+M)
-        samples[iter,:] .= x
-        #en_prior = 0.0
-        #en_w = 0.0
-        #for k=1:N+M
-            #samples2[iter,k] = x[k]*x[k]
-            #E[iter] += Pot(P[k],x[k])
-            #en_prior += Pot(P[k], x[k])
-            #if k <= N
-                #for μ=1:M
-                    #en_w -= w[k,μ] * x[k] * x[N+μ]
-                    #E[iter] -= w[k,μ]*x[k]*x[N+μ]
-                    #vh[iter, k, μ ] = x[k]*x[N+μ]
-                #end
-            #end
-        #end
+        if mod(iter,tau) == 0
+            counter += 1
+            samples[counter,:] .= x
+        end
+        
         
     end
 

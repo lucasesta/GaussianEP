@@ -129,6 +129,9 @@ function moments(p0::SpikeSlabPrior,μ,σ2)
     =#
     ℓ0 = p0.λ * σ2
     ℓ = 1 + ℓ0;
+    if ℓ/ℓ0 <0
+        throw(DomainError("Combined variance must be positive"))
+    end
     z = ℓ * (1 + (1/p0.ρ-1) * exp(-0.5*(μ)^2/σ2/ℓ) * sqrt(ℓ/ℓ0))
     av = μ / z;
     va = (σ2 + μ^2*(1/ℓ - 1/z)) / z;
@@ -139,6 +142,9 @@ end
 function gradient(p0::SpikeSlabPrior, μ, σ2)
     s = σ2
     d = 1 + p0.λ * s;
+    if s/d <0
+        throw(DomainError("combined variance must be positive"))
+    end
     q = sqrt(p0.λ * s / d);
     f = exp(-μ^2 / (2s*d));
     den = (1 - p0.ρ) * f + q * p0.ρ;

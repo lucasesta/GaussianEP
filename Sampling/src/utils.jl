@@ -131,9 +131,9 @@ function pot(x, P::Vector{SpikeSlabPrior{T}}) where T <: Real
 
     for l=1:L
         if x == 0.0
-            e -= log(1-ρ[l])
+            e += log(1-ρ[l])
         else
-            e += -log(ρ[l]) + 0.5 * λ[l] * x[l] * x[l] + 0.5 * log(2 * π / λ[l])
+            e += log(ρ[l]) - 0.5 * λ[l] * x[l] * x[l] - 0.5 * log(2 * π / λ[l])
         end
     end
 

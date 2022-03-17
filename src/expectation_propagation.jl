@@ -449,7 +449,8 @@ function block_expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::Abstra
         end
         #ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H)
         if mod(iter, nprint) == 0
-            println("it: ", iter, " Δav: ", Δav, " Δgrad: ", Δgrad)
+            f = GaussianEP.free(0.5*( inv(Matrix([ Dv -W ; -Wt Dh ])) .+ inv(Matrix([ Dv -W ; -Wt Dh ]))' ), vstate, hstate, P0)
+            println("it: ", iter, " Δav: ", Δav, " Δgrad: ", Δgrad, " free: ", f)
         end
         if Δav < epsconv && Δgrad < epsgrad
             Avh[Nv+1:end,Nv+1:end] += Dh
@@ -677,4 +678,21 @@ function inplaceinverse!(dest,source)
     copy!(dest, source)
     println(isposdef(source), " ", rank(source))
     LinearAlgebra.inv!(cholesky!(dest))
+end
+
+# Function for computing the EP free energy
+
+function free(Σ::Matrix{T}, v_s::EPState{T}, h_s::EPState{T}, P0::Vector{BinaryPrior{T}}) where T <: Real
+
+    N = length(v_s.av)
+    M = length(h_s.av)
+    
+    z_q = 0.5*(N+M-1)*logdet(Σ)
+    z_v = sum(0.5*(1 .- v_s.av_cav).^2 ./ v_s.va_cav)
+    z_h = sum(0.5*(1 .- h_s.av_cav).^2 ./ h_s.va_cav)
+    z_v -= sum(log.([P0[n].ρ*exp((0.5-v_s.av_cav[n])/(v_s.va_cav[n]))+1.0-P0[n].ρ for n=1:N]))
+    z_h -= sum(log.([P0[N+m].ρ*exp((0.5-h_s.av_cav[m])/(h_s.va_cav[m]))+1.0-P0[N+m].ρ for m=1:M]))
+    
+    return (z_q+z_v+z_h)/(N+M)+(N+M-1)/2*log(2π)
+
 end

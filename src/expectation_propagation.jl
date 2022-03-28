@@ -696,3 +696,15 @@ function free(Σ::Matrix{T}, v_s::EPState{T}, h_s::EPState{T}, P0::Vector{Binary
     return (z_q+z_v+z_h)/(N+M)+(N+M-1)/2*log(2π)
 
 end
+
+function free_v(Σ::Matrix{T}, v_s::EPState{T}, P0::Vector{BinaryPrior{T}}) where T <: Real
+
+    N = length(v_s.av)
+    
+    z_q = 0.5*(N-1)*logdet(Σ)
+    z_v = sum(0.5*(1 .- v_s.av_cav).^2 ./ v_s.va_cav)
+    z_v -= sum(log.([P0[n].ρ*exp((0.5-v_s.av_cav[n])/(v_s.va_cav[n]))+1.0-P0[n].ρ for n=1:N]))
+    
+    return (z_q+z_v)/N+(N-1)/2*log(2π)
+
+end

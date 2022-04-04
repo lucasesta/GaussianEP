@@ -1,6 +1,6 @@
 module GaussianEP
 
-export expectation_propagation, Term, TermRBM, EPState, EPOut, BlockEPState
+export block_expectation_propagation, expectation_propagation, Term, TermRBM, EPState, EPOut
 export Prior, IntervalPrior, SpikeSlabPrior, BinaryPrior, GaussianPrior, PosteriorPrior, QuadraturePrior, AutoPrior, ThetaPrior, UniformPrior, ReLUPrior
 
 using MKL, ExtractMacro, SpecialFunctions, LinearAlgebra, DelimitedFiles, Random

@@ -445,7 +445,7 @@ function block_expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::Abstra
             Δgrad = max(Δgrad,gradient(P0[i], av_cavv[i], va_cavv[i]));
         end
         for i in 1:Nh
-            Δgrad = max(Δgrad,gradient(P0[i+Nv], av_cavh[i], va_cavv[i]));
+            Δgrad = max(Δgrad,gradient(P0[i+Nv], av_cavh[i], va_cavh[i]));
         end
         #ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H)
         if mod(iter, nprint) == 0

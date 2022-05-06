@@ -449,7 +449,8 @@ function block_expectation_propagation(H::AbstractVector{TermRBM{T}}, P0::Abstra
         end
         #ret = callback(iter,state,Δav,Δva,epsconv,maxiter,H)
         if mod(iter, nprint) == 0
-            f = GaussianEP.free(0.5*( inv(Matrix([ Dv -W ; -Wt Dh ])) .+ inv(Matrix([ Dv -W ; -Wt Dh ]))' ), vstate, hstate, P0)
+            #f = GaussianEP.free(0.5*( inv(Matrix([ Dv -W ; -Wt Dh ])) .+ inv(Matrix([ Dv -W ; -Wt Dh ]))' ), vstate, hstate, P0)
+            f = 0.0
             println("it: ", iter, " Δav: ", Δav, " Δgrad: ", Δgrad, " free: ", f)
         end
         if Δav < epsconv && Δgrad < epsgrad

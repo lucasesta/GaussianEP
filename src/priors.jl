@@ -230,7 +230,7 @@ function moments(p0::BinaryPrior, μ, σ2)
     if (isnan(Z) || isinf(Z))
         Z = p0.ρ + (1-p0.ρ) * earg;
         av = p0.ρ * p0.x0 + (1-p0.ρ) * p0.x1 * earg;
-        mom2 = p0.ρ * (p0.x0^2) + (1-p0.ρ) * p0.x1 * earg;
+        mom2 = p0.ρ * (p0.x0^2) + (1-p0.ρ) * p0.x1^2 * earg;
     end
     av /= Z;
     mom2 /= Z;

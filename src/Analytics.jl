@@ -40,7 +40,7 @@ end
 function compute_analytic(w::Matrix, Pv::Vector{BinaryPrior{T}}, Ph::Vector{GaussianPrior{T}}) where {T<:Real}
 
     N, M = size(w)
-    @assert N <= 20
+    @assert N <= 25
     h, J = CoupField(w,Pv,Ph)
     
     av_v = zeros(N)
@@ -266,6 +266,219 @@ function average_h2(h::Vector{T}, J::Matrix{T}, Ph::GaussianPrior,w::Matrix{T},i
     end
 
     av_h2 /= γ^2
+    av_h2 += (1/γ)
+
+    return av_h2
+
+end
+
+# Binary visible-Gaussian hidden with soft constraint:
+# Bernoulli visible variables defined by parameter θᵛᵢ
+# ϕᵢ(v)=exp[v*θᵛᵢ]/(1+exp[θᵛᵢ]). Gaussian hidden units
+# of distribution ψₘ(h)∝exp[-γₘ*h^2/2+θₘ*h]. The soft
+# constraint is imposed as an additional visible prior
+# Φ(v)∝exp[-β/2*(Av-1)ᵀ(Av-1)] 
+
+# Function computing all observables 
+
+function compute_analytic(w::Matrix, Pv::Vector{BinaryPrior{T}}, Ph::Vector{GaussianPrior{T}}, β::T) where {T<:Real}
+
+    N, M = size(w)
+    @assert N <= 25
+
+    θᵛ=zeros(T,N)
+    θʰ = zeros(T,M)
+    γ = zeros(T,M)
+
+    # Bernoulli exponent of visible units
+    for n=1:N
+        θᵛ[n] = log((1-Pv[n].ρ)/Pv[n].ρ)
+    end
+
+    # Initialize vectors of mean and inverse variance for hidden units
+    for m=1:M
+        γ[m] = Ph[m].β
+        θʰ[m] = Ph[m].μ*Ph[m].β
+    end
+
+    av_v = zeros(N)
+    av_h = zeros(M)
+    av_vv = zeros(N)
+    av_hh = zeros(M)
+
+    h, J = CoupField(w,θᵛ,θʰ,γ,β)
+    Z = comp_z(h,J)
+    
+    for i=1:N
+        av_v[i] = average_v(h, J, i, Z)
+        av_vv[i] = average_vv(h, J, i, i, Z)
+    end
+    
+    for j=1:M
+        av_h[j] = average_h(h, J, θʰ[j], γ[j], w, j, Z)
+        av_hh[j] = average_h2(h, J, θʰ[j], γ[j], w, j, Z)
+    end
+
+    cov_vh = zeros(N,M)
+    for i = 1:N
+        for j = 1:M
+            cov_vh[i,j] = average_vh(h, J, θʰ[j], γ[j], w, i, j, Z)
+        end
+    end
+
+    return vcat(av_v, av_h), vcat(av_vv - av_v.^2, av_hh - av_h.^2), cov_vh
+    
+end
+
+
+#Function defining fields and coupling from 
+function CoupField(w::Matrix{T}, θᵛ::Vector{T}, θʰ::Vector{T}, γ::Vector{T}, β::T) where {T<:Real}
+
+    N, M = size(w)
+    h = zeros(T,N)
+    J = zeros(T,N,N)    
+
+    # Field definition
+    for i=1:N
+        h[i] += θᵛ[i] + β*0.5
+        for m=1:M
+            h[i] += w[i,m]*(θʰ[m]+0.5*w[i,m])/γ[m]
+        end
+    end
+
+    #Coupling definition
+    for i=1:N-1
+        for j=i+1:N
+            for m=1:M
+                J[i,j] += w[i,m]*w[j,m]/γ[m] 
+            end
+            J[i,j] -= β
+            J[j,i] = J[i,j]'
+        end
+    end
+
+    return h,J
+
+end
+
+
+#Function to compute the average value of vᵢ (i=idx)
+function average_v(h::Vector{T}, J::Matrix{T}, idx::Int64, Z::T) where {T<:Real}
+
+    N = length(h)
+    av = 0.0
+
+    space = [0:1 for i=1:N]
+    conf = collect(Iterators.product(space...))
+    idx_av = findall(x->x[idx]==1,conf[:])
+
+    for c in conf[idx_av]
+        E = 0.0
+        v = [c...]
+        for i=1:N
+            E += h[i]*v[i]
+            if i<N
+                for j=i+1:N
+                    E += J[i,j]*v[i]*v[j]
+                end
+            end
+        end
+        av += exp(E)
+    end
+
+    av /= Z
+
+    return av
+
+end
+
+# Function to compute the cross correlation ⟨vᵢ*hₘ⟩
+
+function average_vh(h::Vector{T}, J::Matrix{T}, θ::T, γ::T, w::Matrix{T}, idx_v::Int64, idx_m::Int64, Z::T) where {T<:Real}
+
+    N = length(h)
+
+    av_v = average_v(h,J,idx_v,Z)
+
+    #xc += av_v*(θ-w[idx_v,idx_m])
+    xc = av_v * θ
+    #for i in setdiff(1:N,idx_v)
+    for i in 1:N
+        #xc += w[i,idx_m]*average_vv(h,J,idx_v,i)
+        xc += w[i,idx_m]*average_vv(h,J,idx_v,i,Z)
+    end
+    
+    xc /= γ
+
+    return xc
+
+end
+
+# Function to compute visibile-visible correlation ⟨vᵢvⱼ⟩
+
+function average_vv(h::Vector{T}, J::Matrix{T}, idx1::Int64, idx2::Int64, Z::T) where {T<:Real}
+
+    N = length(h)
+    av_v1v2 = 0.0
+
+    space = [0:1 for i=1:N]
+    conf = collect(Iterators.product(space...))
+    idx_av = findall(x->x[idx1]==1 && x[idx2]==1,conf[:])
+
+    for c in conf[idx_av]
+        E = 0.0
+        v = [c...]
+        for i=1:N
+            E += h[i]*v[i]
+            if i<N
+                for j=i+1:N
+                    E += J[i,j]*v[i]*v[j]
+                end
+            end
+        end
+        av_v1v2 += exp(E)
+    end
+
+    av_v1v2 /= Z
+
+    return av_v1v2
+
+end
+
+# Function to compute hidden average value ⟨hₘ⟩
+
+function average_h(h::Vector{T}, J::Matrix{T}, θ::T, γ::T, w::Matrix{T}, idx::Int64, Z::T) where {T<:Real}
+
+    N = length(h)
+    av_h = 0.0
+
+    av_h += θ
+
+    for i=1:N
+        av_h += w[i,idx]*average_v(h,J,i,Z)
+    end
+
+    av_h /= γ
+
+    return av_h
+
+end
+
+function average_h2(h::Vector{T}, J::Matrix{T}, θ::T, γ::T ,w::Matrix{T},idx::Int64, Z::T) where {T<:Real}
+
+    N = length(h)
+    av_h2 = 0.0
+
+    av_h2 += (θ*θ)
+
+    for i=1:N
+        av_h2 += 2 * θ * w[i,idx]*average_v(h,J,i,Z)
+        for j=1:N
+            av_h2 += w[i,idx]*w[j,idx]*average_vv(h,J,i,j,Z)
+        end
+    end
+
+    av_h2 /= (γ*γ)
     av_h2 += (1/γ)
 
     return av_h2
